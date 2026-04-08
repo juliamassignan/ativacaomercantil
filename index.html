@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Ativações</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: #4D61FF;
+            color: white;
+            padding: 30px 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar h1 {
+            font-size: 24px;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .filter-group {
+            margin-bottom: 25px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .filter-group select option {
+            background-color: #4D61FF;
+            color: white;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+
+        .section-icon {
+            font-size: 24px;
+        }
+
+        .date-filter {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .date-btn {
+            padding: 10px 16px;
+            border: 1px solid #E6E6E6;
+            border-radius: 20px;
+            background-color: white;
+            color: #4D61FF;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .date-btn:hover {
+            background-color: #F0F2FF;
+        }
+
+        .date-btn.active {
+            background-color: #4D61FF;
+            color: white;
+            border-color: #4D61FF;
+        }
+
+        .kpi-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #4D61FF;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container.small {
+            height: 300px;
+        }
+
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status-card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #ccc;
+        }
+
+        .status-card-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin: 0 auto 10px;
+        }
+
+        .status-card-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .status-card-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .status-card-percent {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .benefit-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .benefit-card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #ccc;
+        }
+
+        .benefit-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .benefit-card-stat {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4D61FF;
+            margin-bottom: 5px;
+        }
+
+        .benefit-card-percent {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Tabela de Heatmap */
+        .heatmap-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #E6E6E6;
+            margin-top: 20px;
+        }
+
+        .heatmap-table thead {
+            background-color: #4D61FF;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+
+        .heatmap-table th {
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .heatmap-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #E6E6E6;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .heatmap-table tbody tr:nth-child(odd) {
+            background-color: white;
+        }
+
+        .heatmap-table tbody tr:nth-child(even) {
+            background-color: #FAFAFA;
+        }
+
+        .heatmap-table tbody tr:first-child td:first-child {
+            font-weight: 700;
+            text-align: left;
+        }
+
+        .heatmap-high {
+            background-color: #E6F4EA;
+            color: #1E7E34;
+        }
+
+        .heatmap-medium {
+            background-color: #FFF8E1;
+            color: #B8860B;
+        }
+
+        .heatmap-low {
+            background-color: #FDECEA;
+            color: #C62828;
+        }
+
+        .heatmap-empty {
+            background-color: #F5F5F5;
+            color: #999;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+        }
+
+        .heatmap-table td:hover .tooltip {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed #4D61FF;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f9f9f9;
+        }
+
+        .upload-area:hover {
+            background-color: #F0F2FF;
+            border-color: #3d4dd9;
+        }
+
+        .upload-area p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #E6E6E6;
+        }
+
+        .preview-table th {
+            background-color: #4D61FF;
+            color: white;
+            font-weight: 600;
+        }
+
+        .preview-table tbody tr:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #lastUpdate {
+            font-size: 12px;
+            color: #999;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <h1>Dashboard</h1>
+            
+            <div class="filter-group">
+                <label>Estado (UF)</label>
+                <select id="filterUF" onchange="applyFilters()">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Benefício</label>
+                <select id="filterBenefit" onchange="applyFilters()">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Status de Bloqueio</label>
+                <select id="filterBlockStatus" onchange="applyFilters()">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- UPLOAD SECTION -->
+            <div class="section hidden" id="uploadSection">
+                <div class="section-title">
+                    <span class="section-icon">📤</span>
+                    Importar Dados
+                </div>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <p><strong>Clique ou arraste um arquivo Excel aqui</strong></p>
+                    <p style="font-size: 12px; color: #999;">Arquivo .xlsx com as colunas: Nome, Telefone, Idade, Faixa etária, UF, Beneficio Enviado, Status de Entrega, Status de Bloqueio, Data Última Atualização</p>
+                </div>
+                <input type="file" id="fileInput" accept=".xlsx" onchange="handleFile(event)">
+                <table class="preview-table" id="previewTable">
+                    <thead id="previewHead"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+                <div id="lastUpdate"></div>
+            </div>
+
+            <!-- DASHBOARD SECTIONS (hidden until data is loaded) -->
+            <div id="dashboardContent" class="hidden">
+                <!-- HEADER -->
+                <div class="header">
+                    <h1>Dashboard de Ativações</h1>
+                    <p>Análise completa de ativações e status de entrega</p>
+                </div>
+
+                <!-- SEÇÃO 1: EVOLUÇÃO DE ATIVOS -->
+                <div class="section">
+                    <div class="section-title">
+                        <span class="section-icon">📊</span>
+                        Evolução de Ativos por Data
+                    </div>
+                    <div class="date-filter" id="evolutionDateFilter">
+                        <button class="date-btn active" onclick="setEvolutionDateFilter('all')">Ver tudo</button>
+                        <button class="date-btn" onclick="setEvolutionDateFilter('26/03')">A partir de 26/03</button>
+                        <button class="date-btn" onclick="setEvolutionDateFilter('02/04')">A partir de 02/04</button>
+                        <button class="date-btn" onclick="setEvolutionDateFilter('06/04')">A partir de 06/04</button>
+                    </div>
+
+                    <div class="kpi-cards">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total de Registros</div>
+                            <div class="kpi-value" id="kpiTotalRecords">0</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total de Ativos</div>
+                            <div class="kpi-value" id="kpiTotalActive">0</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">% de Ativos</div>
+                            <div class="kpi-value" id="kpiPercentActive">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="chartActiveEvolution"></canvas>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 2: STATUS DE ENTREGA -->
+                <div class="section">
+                    <div class="section-title">
+                        <span class="section-icon">📬</span>
+                        Status de Entrega
+                    </div>
+                    <div class="chart-container small">
+                        <canvas id="chartDeliveryStatus"></canvas>
+                    </div>
+                    <div class="status-cards">
+                        <div class="status-card">
+                            <div class="status-card-color" style="background-color: #10B981;"></div>
+                            <div class="status-card-label">Entregue Operadora</div>
+                            <div class="status-card-value" id="deliveryOperadora">0</div>
+                            <div class="status-card-percent" id="deliveryOperadoraPercent">0%</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-color" style="background-color: #4D61FF;"></div>
+                            <div class="status-card-label">Entregue Celular</div>
+                            <div class="status-card-value" id="deliveryPhone">0</div>
+                            <div class="status-card-percent" id="deliveryPhonePercent">0%</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-color" style="background-color: #F59E0B;"></div>
+                            <div class="status-card-label">Não Entregue</div>
+                            <div class="status-card-value" id="deliveryNotDelivered">0</div>
+                            <div class="status-card-percent" id="deliveryNotDeliveredPercent">0%</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-color" style="background-color: #EF4444;"></div>
+                            <div class="status-card-label">Número Inválido</div>
+                            <div class="status-card-value" id="deliveryInvalid">0</div>
+                            <div class="status-card-percent" id="deliveryInvalidPercent">0%</div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-card-color" style="background-color: #8B5CF6;"></div>
+                            <div class="status-card-label">#N/D</div>
+                            <div class="status-card-value" id="deliveryND">0</div>
+                            <div class="status-card-percent" id="deliveryNDPercent">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 3: STATUS DE BLOQUEIO -->
+                <div class="section">
+                    <div class="section-title">
+                        <span class="section-icon">🔒</span>
+                        Status de Bloqueio
+                    </div>
+                    <div class="chart-container small">
+                        <canvas id="chartBlockStatus"></canvas>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 4: DISTRIBUIÇÃO POR BENEFÍCIO -->
+                <div class="section">
+                    <div class="section-title">
+                        <span class="section-icon">🎁</span>
+                        Distribuição por Benefício Enviado
+                    </div>
+
+                    <div class="date-filter" id="benefitDateFilter">
+                        <button class="date-btn active" onclick="setBenefitDateFilter('all')">Ver tudo</button>
+                        <button class="date-btn" onclick="setBenefitDateFilter('26/03')">A partir de 26/03</button>
+                        <button class="date-btn" onclick="setBenefitDateFilter('02/04')">A partir de 02/04</button>
+                        <button class="date-btn" onclick="setBenefitDateFilter('06/04')">A partir de 06/04</button>
+                    </div>
+
+                    <!-- Subseção: Cards de Benefícios -->
+                    <div class="benefit-cards" id="benefitCardsContainer"></div>
+
+                    <!-- Subseção: Gráfico de Barras Agrupadas (Enviados) -->
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E6E6E6;">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px;">Benefícios Enviados por Faixa Etária</h3>
+                        <div class="chart-container">
+                            <canvas id="chartBenefitByAge"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Subseção: Gráfico de % de Ativos (Teste A/B) -->
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E6E6E6;">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px;">Taxa de Ativos (%) por Benefício x Faixa Etária - Teste A/B</h3>
+                        <div class="chart-container">
+                            <canvas id="chartConversionByAge"></canvas>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================
+        let allData = [];
+        let filteredData = [];
+        let charts = {};
+        let lastImportDate = null;
+        let currentEvolutionDateFilter = 'all';
+        let currentBenefitDateFilter = 'all';
+        let detectedYear = 2026;
+
+        const benefitColors = {
+            'Rappi': '#FF6B6B',
+            'Uber': '#4D61FF',
+            'Shopee': '#10B981',
+            'Cashback na Fatura': '#F59E0B'
+        };
+
+        const ageRanges = ['20-49', '50-59', '>=60'];
+
+        // De-para de Status de Bloqueio
+        const blockStatusMap = {
+            'M': 'Envio Correio',
+            'T': 'Extravio',
+            'D': 'Função Débito Ativo',
+            'J': 'Cancelado pelo Cliente',
+            'R': 'Roubo',
+            'Z': 'Temporário',
+            'H': 'Cancelado SIC',
+            'O': 'Preventivo Fraude',
+            'S': 'Cancelado pelo Banco',
+            'F': 'Fraude',
+            'N': 'Preventivo Fraude',
+            'G': 'Falecimento',
+            'V': 'Bloqueio Judicial',
+            'Q': 'Danificado'
+        };
+
+        // ============================================
+        // UPLOAD E PROCESSAMENTO DE DADOS
+        // ============================================
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    // Processar dados
+                    allData = jsonData.map(row => {
+                        const toString = (value) => {
+                            if (value === null || value === undefined) return '';
+                            return String(value).trim();
+                        };
+
+                        // Processar data: converter para DD/MM/YYYY se necessário
+                        let dataAtualizacao = row['Data Última Atualização'] || '';
+                        if (typeof dataAtualizacao === 'number') {
+                            // Converter serial do Excel para data (sem ajuste de fuso horário)
+                            const excelDate = new Date((dataAtualizacao - 25569) * 86400 * 1000);
+                            // Corrigir subtraçao de um dia: adicionar 1 dia
+                            excelDate.setDate(excelDate.getDate() + 1);
+                            dataAtualizacao = excelDate.toLocaleDateString('pt-BR');
+                        } else {
+                            dataAtualizacao = toString(dataAtualizacao);
+                        }
+
+                        // Processar Status de Bloqueio com de-para
+                        let statusBloqueio = toString(row['Status de Bloqueio']);
+                        const statusBloqueioCode = statusBloqueio;
+                        const statusBloqueioDescricao = blockStatusMap[statusBloqueio] || statusBloqueio;
+                        const isAtivo = statusBloqueio === '' || statusBloqueio.toLowerCase() === 'ativo';
+
+                        // Detectar ano dos dados
+                        const yearMatch = dataAtualizacao.match(/(\d{4})$/);
+                        if (yearMatch) {
+                            detectedYear = parseInt(yearMatch[1]);
+                        }
+
+                        // Processar Status de Entrega com fallback para múltiplas variações de nome
+                        let statusEntrega = toString(row['Status de Entrega']) || toString(row['Status Entrega']) || toString(row['Status de entrega']) || '';
+
+                        return {
+                            nome: toString(row['Nome']),
+                            telefone: toString(row['Telefone']),
+                            idade: parseInt(row['Idade']) || 0,
+                            faixaEtaria: toString(row['Faixa etária']),
+                            uf: toString(row['UF']),
+                            beneficio: toString(row['Beneficio Enviado']),
+                            statusEntrega: statusEntrega,
+                            statusBloqueio: statusBloqueioDescricao,
+                            statusBloqueioCode: statusBloqueioCode,
+                            isAtivo: isAtivo,
+                            dataAtualizacao: dataAtualizacao
+                        };
+                    });
+
+                    lastImportDate = new Date();
+                    filteredData = [...allData];
+
+                    // Mostrar preview
+                    showPreview(jsonData);
+                    populateFilters();
+
+                    // Mostrar dashboard
+                    document.getElementById('uploadSection').classList.add('hidden');
+                    document.getElementById('dashboardContent').classList.remove('hidden');
+
+                    // Atualizar dashboard
+                    updateDashboard();
+
+                } catch (error) {
+                    alert('Erro ao processar arquivo: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showPreview(data) {
+            const previewHead = document.getElementById('previewHead');
+            const previewBody = document.getElementById('previewBody');
+            previewHead.innerHTML = '';
+            previewBody.innerHTML = '';
+
+            if (data.length === 0) return;
+
+            const headers = Object.keys(data[0]);
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                previewHead.appendChild(th);
+            });
+
+            data.slice(0, 10).forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.textContent = row[header] || '';
+                    tr.appendChild(td);
+                });
+                previewBody.appendChild(tr);
+            });
+
+            document.getElementById('previewTable').style.display = 'table';
+        }
+
+        function populateFilters() {
+            const ufs = [...new Set(allData.map(r => r.uf).filter(u => u))].sort();
+            const ufSelect = document.getElementById('filterUF');
+            ufs.forEach(uf => {
+                const option = document.createElement('option');
+                option.value = uf;
+                option.textContent = uf;
+                ufSelect.appendChild(option);
+            });
+
+            const benefits = [...new Set(allData.map(r => r.beneficio).filter(b => b))].sort();
+            const benefitSelect = document.getElementById('filterBenefit');
+            benefits.forEach(benefit => {
+                const option = document.createElement('option');
+                option.value = benefit;
+                option.textContent = benefit;
+                benefitSelect.appendChild(option);
+            });
+
+            const blockStatuses = [...new Set(allData.map(r => r.statusBloqueio).filter(s => s))].sort();
+            const blockSelect = document.getElementById('filterBlockStatus');
+            blockStatuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status;
+                blockSelect.appendChild(option);
+            });
+        }
+
+        // ============================================
+        // FILTROS E ANÁLISE DE DADOS
+        // ============================================
+        function applyFilters() {
+            const ufFilter = document.getElementById('filterUF').value;
+            const benefitFilter = document.getElementById('filterBenefit').value;
+            const blockStatusFilter = document.getElementById('filterBlockStatus').value;
+
+            filteredData = allData.filter(row => {
+                const ufMatch = !ufFilter || row.uf === ufFilter;
+                const benefitMatch = !benefitFilter || row.beneficio === benefitFilter;
+                const blockMatch = !blockStatusFilter || row.statusBloqueio === blockStatusFilter;
+                return ufMatch && benefitMatch && blockMatch;
+            });
+
+            updateDashboard();
+        }
+
+        function setEvolutionDateFilter(dateStr) {
+            currentEvolutionDateFilter = dateStr;
+            document.querySelectorAll('#evolutionDateFilter .date-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateDashboard();
+        }
+
+        function setBenefitDateFilter(dateStr) {
+            currentBenefitDateFilter = dateStr;
+            document.querySelectorAll('#benefitDateFilter .date-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateDashboard();
+        }
+
+        function getFilteredDataByDate(dateFilter) {
+            if (dateFilter === 'all') {
+                return filteredData;
+            }
+
+            const [filterDay, filterMonth] = dateFilter.split('/');
+            const filterDate = new Date(detectedYear, parseInt(filterMonth) - 1, parseInt(filterDay));
+
+            return filteredData.filter(row => {
+                if (!row.dataAtualizacao) return false;
+                try {
+                    const [day, month, year] = row.dataAtualizacao.split('/');
+                    const rowDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    return rowDate >= filterDate;
+                } catch (e) {
+                    return false;
+                }
+            });
+        }
+
+        // ============================================
+        // ATUALIZAR DASHBOARD
+        // ============================================
+        function updateDashboard() {
+            updateKPIs();
+            updateCharts();
+            updateBenefitSection();
+        }
+
+        function updateKPIs() {
+            const totalRecords = filteredData.length;
+            const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
+            const activeRecords = evolutionData.filter(r => r.isAtivo).length;
+            const percentActive = totalRecords > 0 ? ((activeRecords / totalRecords) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpiTotalRecords').textContent = totalRecords.toLocaleString('pt-BR');
+            document.getElementById('kpiTotalActive').textContent = activeRecords.toLocaleString('pt-BR');
+            document.getElementById('kpiPercentActive').textContent = percentActive + '%';
+
+            // Status de Entrega
+            const deliveryStats = {
+                'Entregue Operadora': 0,
+                'Entregue Celular': 0,
+                'Não Entregue': 0,
+                'Número Inválido': 0,
+                '#N/D': 0
+            };
+
+            filteredData.forEach(row => {
+                if (deliveryStats.hasOwnProperty(row.statusEntrega)) {
+                    deliveryStats[row.statusEntrega]++;
+                }
+            });
+
+            const total = Object.values(deliveryStats).reduce((a, b) => a + b, 0);
+            document.getElementById('deliveryOperadora').textContent = deliveryStats['Entregue Operadora'];
+            document.getElementById('deliveryOperadoraPercent').textContent = total > 0 ? ((deliveryStats['Entregue Operadora'] / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('deliveryPhone').textContent = deliveryStats['Entregue Celular'];
+            document.getElementById('deliveryPhonePercent').textContent = total > 0 ? ((deliveryStats['Entregue Celular'] / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('deliveryNotDelivered').textContent = deliveryStats['Não Entregue'];
+            document.getElementById('deliveryNotDeliveredPercent').textContent = total > 0 ? ((deliveryStats['Não Entregue'] / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('deliveryInvalid').textContent = deliveryStats['Número Inválido'];
+            document.getElementById('deliveryInvalidPercent').textContent = total > 0 ? ((deliveryStats['Número Inválido'] / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('deliveryND').textContent = deliveryStats['#N/D'];
+            document.getElementById('deliveryNDPercent').textContent = total > 0 ? ((deliveryStats['#N/D'] / total) * 100).toFixed(1) + '%' : '0%';
+        }
+
+        function updateCharts() {
+            destroyAllCharts();
+            createChartActiveEvolution();
+            createChartDeliveryStatus();
+            createChartBlockStatus();
+        }
+
+        function destroyAllCharts() {
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            charts = {};
+        }
+
+        // ============================================
+        // GRÁFICOS
+        // ============================================
+        function createChartActiveEvolution() {
+            const dataToProcess = getFilteredDataByDate(currentEvolutionDateFilter);
+            const dataByDate = {};
+
+            dataToProcess.forEach(row => {
+                if (row.isAtivo && row.dataAtualizacao) {
+                    try {
+                        const [day, month, year] = row.dataAtualizacao.split('/');
+                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        const dateStr = date.toLocaleDateString('pt-BR');
+                        dataByDate[dateStr] = (dataByDate[dateStr] || 0) + 1;
+                    } catch (e) {
+                        // Ignorar datas inválidas
+                    }
+                }
+            });
+
+            const sortedDates = Object.keys(dataByDate).sort((a, b) => {
+                const [dayA, monthA, yearA] = a.split('/');
+                const [dayB, monthB, yearB] = b.split('/');
+                const dateA = new Date(parseInt(yearA), parseInt(monthA) - 1, parseInt(dayA));
+                const dateB = new Date(parseInt(yearB), parseInt(monthB) - 1, parseInt(dayB));
+                return dateA - dateB;
+            });
+
+            const labels = sortedDates;
+            const data = sortedDates.map(label => dataByDate[label]);
+
+            const ctx = document.getElementById('chartActiveEvolution').getContext('2d');
+            charts['activeEvolution'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ativos por Data',
+                        data: data,
+                        borderColor: '#4D61FF',
+                        backgroundColor: 'rgba(77, 97, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#4D61FF',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createChartDeliveryStatus() {
+            const deliveryStats = {
+                'Entregue Operadora': 0,
+                'Entregue Celular': 0,
+                'Não Entregue': 0,
+                'Número Inválido': 0,
+                '#N/D': 0
+            };
+
+            filteredData.forEach(row => {
+                if (deliveryStats.hasOwnProperty(row.statusEntrega)) {
+                    deliveryStats[row.statusEntrega]++;
+                }
+            });
+
+            const ctx = document.getElementById('chartDeliveryStatus').getContext('2d');
+            charts['deliveryStatus'] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(deliveryStats),
+                    datasets: [{
+                        data: Object.values(deliveryStats),
+                        backgroundColor: ['#10B981', '#4D61FF', '#F59E0B', '#EF4444', '#8B5CF6'],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createChartBlockStatus() {
+            const blockStats = {};
+            filteredData.forEach(row => {
+                const status = row.statusBloqueio || 'Sem Status';
+                blockStats[status] = (blockStats[status] || 0) + 1;
+            });
+
+            const labels = Object.keys(blockStats);
+            const data = Object.values(blockStats);
+            const colors = ['#10B981', '#4D61FF', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+            const ctx = document.getElementById('chartBlockStatus').getContext('2d');
+            charts['blockStatus'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // SEÇÃO DE BENEFÍCIOS
+        // ============================================
+        function updateBenefitSection() {
+            const benefitData = getFilteredDataByDate(currentBenefitDateFilter);
+
+            // Atualizar cards de benefícios
+            updateBenefitCards(benefitData);
+
+            // Atualizar gráfico de barras agrupadas (Enviados)
+            createChartBenefitByAge(benefitData);
+
+            // Atualizar gráfico de % de ativos (Teste A/B)
+            createChartConversionByAge(benefitData);
+        }
+
+        function updateBenefitCards(data) {
+            const benefitStats = {};
+            Object.keys(benefitColors).forEach(benefit => {
+                benefitStats[benefit] = { total: 0, active: 0 };
+            });
+
+            data.forEach(row => {
+                if (benefitStats.hasOwnProperty(row.beneficio)) {
+                    benefitStats[row.beneficio].total++;
+                    if (row.isAtivo) {
+                        benefitStats[row.beneficio].active++;
+                    }
+                }
+            });
+
+            const container = document.getElementById('benefitCardsContainer');
+            container.innerHTML = '';
+
+            Object.entries(benefitStats).forEach(([benefit, stats]) => {
+                const percent = stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0;
+                const card = document.createElement('div');
+                card.className = 'benefit-card';
+                card.style.borderLeftColor = benefitColors[benefit];
+                card.innerHTML = `
+                    <div class="benefit-card-title">${benefit}</div>
+                    <div class="benefit-card-stat">${stats.active}</div>
+                    <div class="benefit-card-percent">${stats.total} total • ${percent}% ativos</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function createChartBenefitByAge(data) {
+            const benefitByAge = {};
+            Object.keys(benefitColors).forEach(benefit => {
+                benefitByAge[benefit] = {};
+                ageRanges.forEach(range => {
+                    benefitByAge[benefit][range] = 0;
+                });
+            });
+
+            data.forEach(row => {
+                if (benefitByAge.hasOwnProperty(row.beneficio)) {
+                    const ageRange = getAgeRange(row.idade);
+                    if (benefitByAge[row.beneficio].hasOwnProperty(ageRange)) {
+                        benefitByAge[row.beneficio][ageRange]++;
+                    }
+                }
+            });
+
+            const datasets = [];
+            Object.entries(benefitColors).forEach(([benefit, color]) => {
+                const dataset = {
+                    label: benefit,
+                    data: ageRanges.map(range => benefitByAge[benefit][range]),
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                };
+                datasets.push(dataset);
+            });
+
+            const ctx = document.getElementById('chartBenefitByAge').getContext('2d');
+            if (charts['benefitByAge']) charts['benefitByAge'].destroy();
+            charts['benefitByAge'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ageRanges,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+
+
+        function createChartConversionByAge(data) {
+            const conversionByAge = {};
+            Object.keys(benefitColors).forEach(benefit => {
+                conversionByAge[benefit] = {};
+                ageRanges.forEach(range => {
+                    conversionByAge[benefit][range] = { active: 0, total: 0 };
+                });
+            });
+
+            data.forEach(row => {
+                if (conversionByAge.hasOwnProperty(row.beneficio)) {
+                    const ageRange = getAgeRange(row.idade);
+                    if (conversionByAge[row.beneficio].hasOwnProperty(ageRange)) {
+                        conversionByAge[row.beneficio][ageRange].total++;
+                        if (row.isAtivo) {
+                            conversionByAge[row.beneficio][ageRange].active++;
+                        }
+                    }
+                }
+            });
+
+            const datasets = [];
+            Object.entries(benefitColors).forEach(([benefit, color]) => {
+                const dataset = {
+                    label: benefit,
+                    data: ageRanges.map(range => {
+                        const stats = conversionByAge[benefit][range];
+                        return stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0;
+                    }),
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                };
+                datasets.push(dataset);
+            });
+
+            const ctx = document.getElementById('chartConversionByAge').getContext('2d');
+            if (charts['conversionByAge']) charts['conversionByAge'].destroy();
+            charts['conversionByAge'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ageRanges,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Taxa de Ativos (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getAgeRange(age) {
+            if (age >= 20 && age <= 49) return '20-49';
+            if (age >= 50 && age <= 59) return '50-59';
+            if (age >= 60) return '>=60';
+            return '20-49'; // Padrão para idades fora do intervalo
+        }
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
