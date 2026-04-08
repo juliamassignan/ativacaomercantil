@@ -1136,82 +1136,84 @@
 
 
         function createChartConversionByAge(data) {
-            const conversionByAge = {};
-            Object.keys(benefitColors).forEach(benefit => {
-                conversionByAge[benefit] = {};
-                ageRanges.forEach(range => {
-                    conversionByAge[benefit][range] = { active: 0, total: 0 };
-                });
-            });
+    const conversionByAge = {};
+    Object.keys(benefitColors).forEach(benefit => {
+        conversionByAge[benefit] = {};
+        ageRanges.forEach(range => {
+            conversionByAge[benefit][range] = { active: 0, total: 0 };
+        });
+    });
 
-            data.forEach(row => {
-                if (conversionByAge.hasOwnProperty(row.beneficio)) {
-                    const ageRange = getAgeRange(row.idade);
-                    if (conversionByAge[row.beneficio].hasOwnProperty(ageRange)) {
-                        conversionByAge[row.beneficio][ageRange].total++;
-                        if (row.isAtivo) {
-                            conversionByAge[row.beneficio][ageRange].active++;
-                        }
-                    }
+    data.forEach(row => {
+        if (conversionByAge.hasOwnProperty(row.beneficio)) {
+            const ageRange = getAgeRange(row.idade);
+            if (conversionByAge[row.beneficio].hasOwnProperty(ageRange)) {
+                conversionByAge[row.beneficio][ageRange].total++;
+                if (row.isAtivo) {
+                    conversionByAge[row.beneficio][ageRange].active++;
                 }
-            });
-
-            const datasets = [];
-            Object.entries(benefitColors).forEach(([benefit, color]) => {
-                const dataset = {
-                    label: benefit,
-                    data: ageRanges.map(range => {
-                        const stats = conversionByAge[benefit][range];
-                        return stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0;
-                    }),
-                    backgroundColor: color,
-                    borderColor: color,
-                    borderWidth: 1
-                };
-                datasets.push(dataset);
-            });
-
-            const ctx = document.getElementById('chartConversionByAge').getContext('2d');
-            if (charts['conversionByAge']) charts['conversionByAge'].destroy();
-            charts['conversionByAge'] = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ageRanges,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': ' + context.parsed.y + '%';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: false
-                        },
-                        y: {
-                            stacked: false,
-                            beginAtZero: true,
-                            max: 100,
-                            title: {
-                                display: true,
-                                text: 'Taxa de Ativos (%)'
-                            }
-                        }
-                    }
-                }
-            });
+            }
         }
+    });
 
+    const datasets = [];
+    Object.entries(benefitColors).forEach(([benefit, color]) => {
+        const dataset = {
+            label: benefit,
+            data: ageRanges.map(range => {
+                const stats = conversionByAge[benefit][range];
+                return stats.total > 0 ? (stats.active / stats.total) * 100 : 0;
+            }),
+            rawData: ageRanges.map(range => conversionByAge[benefit][range]), // 👈 novo
+            backgroundColor: color,
+            borderColor: color,
+            borderWidth: 1
+        };
+        datasets.push(dataset);
+    });
+
+    const ctx = document.getElementById('chartConversionByAge').getContext('2d');
+    if (charts['conversionByAge']) charts['conversionByAge'].destroy();
+
+    charts['conversionByAge'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ageRanges,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const dataset = context.dataset;
+                            const index = context.dataIndex;
+                            const stats = dataset.rawData[index];
+
+                            const percent = context.parsed.y.toFixed(1);
+                            return `${dataset.label}: ${percent}% (${stats.active}/${stats.total})`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Taxa de Ativação (%)'
+                    }
+                }
+            }
+        }
+    });
+}
         function getAgeRange(age) {
             if (age >= 20 && age <= 49) return '20-49';
             if (age >= 50 && age <= 59) return '50-59';
