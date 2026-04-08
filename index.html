@@ -1215,6 +1215,8 @@
     });
 }
         function getAgeRange(age) {
+            const ageNum = Number(age);
+            if (!age || isNaN(ageNum)) return '>=60';
             if (age >= 20 && age <= 49) return '20-49';
             if (age >= 50 && age <= 59) return '50-59';
             if (age >= 60) return '>=60';
