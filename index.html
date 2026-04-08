@@ -428,7 +428,7 @@
         <!-- MAIN CONTENT -->
         <div class="main-content">
             <!-- UPLOAD SECTION -->
-            <div class="section" id="uploadSection">
+            <div class="section hidden" id="uploadSection">
                 <div class="section-title">
                     <span class="section-icon">📤</span>
                     Importar Dados
@@ -547,9 +547,15 @@
                         Distribuição por Benefício Enviado
                     </div>
 
+                    <div class="date-filter" id="benefitDateFilter">
+                        <button class="date-btn active" onclick="setBenefitDateFilter('all')">Ver tudo</button>
+                        <button class="date-btn" onclick="setBenefitDateFilter('26/03')">A partir de 26/03</button>
+                        <button class="date-btn" onclick="setBenefitDateFilter('02/04')">A partir de 02/04</button>
+                        <button class="date-btn" onclick="setBenefitDateFilter('06/04')">A partir de 06/04</button>
+                    </div>
 
-
-
+                    <!-- Subseção: Cards de Benefícios -->
+                    <div class="benefit-cards" id="benefitCardsContainer"></div>
 
                     <!-- Subseção: Gráfico de Barras Agrupadas (Enviados) -->
                     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E6E6E6;">
@@ -1024,14 +1030,51 @@
         // SEÇÃO DE BENEFÍCIOS
         // ============================================
         function updateBenefitSection() {
+    const benefitDataFiltered = getFilteredDataByDate(currentBenefitDateFilter);
 
-            const benefitDataFull = filteredData;
+    // Gráficos → SEM filtro de data (usa tudo que já foi filtrado por UF/benefício/etc)
+    const benefitDataFull = filteredData;
 
-            createChartBenefitByAge(benefitDataFull);
-            createChartConversionByAge(benefitDataFull);
+        updateBenefitCards(benefitDataFiltered);      // mantém filtro
+        createChartBenefitByAge(benefitDataFull);     // remove filtro
+        createChartConversionByAge(benefitDataFull);  // remove filtro
+    }
+
+        function updateBenefitCards(data) {
+            const benefitStats = {};
+            Object.keys(benefitColors).forEach(benefit => {
+                benefitStats[benefit] = { total: 0, active: 0 };
+            });
+
+            data.forEach(row => {
+                if (benefitStats.hasOwnProperty(row.beneficio)) {
+                    benefitStats[row.beneficio].total++;
+                    if (row.isAtivo) {
+                        benefitStats[row.beneficio].active++;
+                    }
+                }
+            });
+
+            const container = document.getElementById('benefitCardsContainer');
+            container.innerHTML = '';
+
+            Object.entries(benefitStats).forEach(([benefit, stats]) => {
+                // base total SEM filtro de data
+                const totalFull = allData.filter(r => r.beneficio === benefit).length;
+                const percent = totalFull > 0 
+                    ? ((stats.active / totalFull) * 100).toFixed(1) 
+                    : 0;
+                const card = document.createElement('div');
+                card.className = 'benefit-card';
+                card.style.borderLeftColor = benefitColors[benefit];
+                card.innerHTML = `
+                    <div class="benefit-card-title">${benefit}</div>
+                    <div class="benefit-card-stat">${stats.active}</div>
+                    <div class="benefit-card-percent">${stats.total} total • ${percent}% ativos</div>
+                `;
+                container.appendChild(card);
+            });
         }
-
-
 
         function createChartBenefitByAge(data) {
             const benefitByAge = {};
@@ -1163,17 +1206,11 @@
             scales: {
                 y: {
                     beginAtZero: true,
-                    suggestedMax: 50, // ajuste inicial
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
-                        }
-                },
-    title: {
-        display: true,
-        text: 'Taxa de Ativação (%)'
-    }
-}
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Taxa de Ativação (%)'
+                    }
                 }
             }
         }
