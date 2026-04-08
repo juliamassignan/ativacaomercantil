@@ -1030,17 +1030,15 @@
         // SEÇÃO DE BENEFÍCIOS
         // ============================================
         function updateBenefitSection() {
-            const benefitData = getFilteredDataByDate(currentBenefitDateFilter);
+    const benefitDataFiltered = getFilteredDataByDate(currentBenefitDateFilter);
 
-            // Atualizar cards de benefícios
-            updateBenefitCards(benefitData);
+    // Gráficos → SEM filtro de data (usa tudo que já foi filtrado por UF/benefício/etc)
+    const benefitDataFull = filteredData;
 
-            // Atualizar gráfico de barras agrupadas (Enviados)
-            createChartBenefitByAge(benefitData);
-
-            // Atualizar gráfico de % de ativos (Teste A/B)
-            createChartConversionByAge(benefitData);
-        }
+        updateBenefitCards(benefitDataFiltered);      // mantém filtro
+        createChartBenefitByAge(benefitDataFull);     // remove filtro
+        createChartConversionByAge(benefitDataFull);  // remove filtro
+    }
 
         function updateBenefitCards(data) {
             const benefitStats = {};
@@ -1061,7 +1059,11 @@
             container.innerHTML = '';
 
             Object.entries(benefitStats).forEach(([benefit, stats]) => {
-                const percent = stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0;
+                // base total SEM filtro de data
+                const totalFull = allData.filter(r => r.beneficio === benefit).length;
+                const percent = totalFull > 0 
+                    ? ((stats.active / totalFull) * 100).toFixed(1) 
+                    : 0;
                 const card = document.createElement('div');
                 card.className = 'benefit-card';
                 card.style.borderLeftColor = benefitColors[benefit];
