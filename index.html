@@ -522,7 +522,7 @@
                         </div>
                         <div class="status-card">
                             <div class="status-card-color" style="background-color: #8B5CF6;"></div>
-                            <div class="status-card-label">#N/D</div>
+                            <div class="status-card-label">N/a</div>
                             <div class="status-card-value" id="deliveryND">0</div>
                             <div class="status-card-percent" id="deliveryNDPercent">0%</div>
                         </div>
@@ -838,7 +838,7 @@
                 'Entregue Celular': 0,
                 'Não Entregue': 0,
                 'Número Inválido': 0,
-                '#N/D': 0
+                'N/a': 0
             };
 
             filteredData.forEach(row => {
@@ -856,8 +856,8 @@
             document.getElementById('deliveryNotDeliveredPercent').textContent = total > 0 ? ((deliveryStats['Não Entregue'] / total) * 100).toFixed(1) + '%' : '0%';
             document.getElementById('deliveryInvalid').textContent = deliveryStats['Número Inválido'];
             document.getElementById('deliveryInvalidPercent').textContent = total > 0 ? ((deliveryStats['Número Inválido'] / total) * 100).toFixed(1) + '%' : '0%';
-            document.getElementById('deliveryND').textContent = deliveryStats['#N/D'];
-            document.getElementById('deliveryNDPercent').textContent = total > 0 ? ((deliveryStats['#N/D'] / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('deliveryND').textContent = deliveryStats['N/a'];
+            document.getElementById('deliveryNDPercent').textContent = total > 0 ? ((deliveryStats['N/a'] / total) * 100).toFixed(1) + '%' : '0%';
         }
 
         function updateCharts() {
@@ -951,7 +951,7 @@
                 'Entregue Celular': 0,
                 'Não Entregue': 0,
                 'Número Inválido': 0,
-                '#N/D': 0
+                'N/a': 0
             };
 
             filteredData.forEach(row => {
