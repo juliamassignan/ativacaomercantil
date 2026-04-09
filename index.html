@@ -1028,6 +1028,7 @@
             const benefitDataFull = filteredData;
 
     // Gráficos → SEM filtro de data (usa tudo que já foi filtrado por UF/benefício/etc)
+        updateBenefitCards(benefitDataFull);
         createChartBenefitByAge(benefitDataFull);     // remove filtro
         createChartConversionByAge(benefitDataFull);  // remove filtro
     }
