@@ -479,6 +479,10 @@
                             <div class="kpi-label">% de Ativos</div>
                             <div class="kpi-value" id="kpiPercentActive">0%</div>
                         </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Tempo Médio de Ativação</div>
+                            <div class="kpi-value" id="kpiTempoAtivacao">0</div>
+                        </div>
                     </div>
 
                     <div class="chart-container">
@@ -670,7 +674,8 @@
                             statusBloqueio: statusBloqueioDescricao,
                             statusBloqueioCode: statusBloqueioCode,
                             isAtivo: isAtivo,
-                            dataAtualizacao: dataAtualizacao
+                            dataAtualizacao: dataAtualizacao,
+                            tempoAtivacao: parseFloat(row['Tempo de ativação']) || null,
                         };
                     });
 
@@ -818,10 +823,18 @@
             const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
             const activeRecords = evolutionData.filter(r => r.isAtivo).length;
             const percentActive = totalRecords > 0 ? ((activeRecords / totalRecords) * 100).toFixed(1) : 0;
+            const temposValidos = filteredData
+                .filter(r => r.isAtivo && r.tempoAtivacao !== null)
+                .map(r => r.tempoAtivacao);
+
+            const mediaTempo = temposValidos.length > 0
+                ? (temposValidos.reduce((a, b) => a + b, 0) / temposValidos.length)
+                : 0;
 
             document.getElementById('kpiTotalRecords').textContent = totalRecords.toLocaleString('pt-BR');
             document.getElementById('kpiTotalActive').textContent = activeRecords.toLocaleString('pt-BR');
             document.getElementById('kpiPercentActive').textContent = percentActive + '%';
+            document.getElementById('kpiTempoAtivacao').textContent = mediaTempo.toFixed(1) + ' dias';
 
             // Status de Entrega
             const deliveryStats = {
