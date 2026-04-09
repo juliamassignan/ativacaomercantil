@@ -547,12 +547,7 @@
                         Distribuição por Benefício Enviado
                     </div>
 
-                    <div class="date-filter" id="benefitDateFilter">
-                        <button class="date-btn active" onclick="setBenefitDateFilter('all')">Ver tudo</button>
-                        <button class="date-btn" onclick="setBenefitDateFilter('26/03')">A partir de 26/03</button>
-                        <button class="date-btn" onclick="setBenefitDateFilter('02/04')">A partir de 02/04</button>
-                        <button class="date-btn" onclick="setBenefitDateFilter('06/04')">A partir de 06/04</button>
-                    </div>
+
 
                     <!-- Subseção: Cards de Benefícios -->
                     <div class="benefit-cards" id="benefitCardsContainer"></div>
@@ -1030,12 +1025,9 @@
         // SEÇÃO DE BENEFÍCIOS
         // ============================================
         function updateBenefitSection() {
-    const benefitDataFiltered = getFilteredDataByDate(currentBenefitDateFilter);
+            const benefitDataFull = filteredData;
 
     // Gráficos → SEM filtro de data (usa tudo que já foi filtrado por UF/benefício/etc)
-    const benefitDataFull = filteredData;
-
-        updateBenefitCards(benefitDataFiltered);      // mantém filtro
         createChartBenefitByAge(benefitDataFull);     // remove filtro
         createChartConversionByAge(benefitDataFull);  // remove filtro
     }
