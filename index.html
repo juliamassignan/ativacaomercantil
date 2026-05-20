@@ -824,7 +824,7 @@
 
             const totalRecords = filteredData.length;
 
-            const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
+            const activeRecords = evolutionData.filter(r => r.isAtivo).length;
 
             const percentActive = totalRecords > 0
                 ? ((activeRecords / totalRecords) * 100).toFixed(1)
