@@ -820,16 +820,26 @@
         }
 
         function updateKPIs() {
-            const totalRecords = filteredData.length;
             const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
+
+            const totalRecords = evolutionData.length;
+
             const activeRecords = evolutionData.filter(r => r.isAtivo).length;
-            const percentActive = totalRecords > 0 ? ((activeRecords / totalRecords) * 100).toFixed(1) : 0;
+
+            const percentActive = totalRecords > 0
+                ? ((activeRecords / totalRecords) * 100).toFixed(1)
+                : 0;
+
             const temposValidos = evolutionData
-                .filter(r => r.isAtivo && r.tempoAtivacao !== null)
-                .map(r => r.tempoAtivacao);
+                .filter(r =>
+                r.isAtivo &&
+                r.tempoAtivacao !== null &&
+                !isNaN(r.tempoAtivacao)
+                )
+                .map(r => Number(r.tempoAtivacao));
 
             const mediaTempo = temposValidos.length > 0
-                ? (temposValidos.reduce((a, b) => a + b, 0) / temposValidos.length)
+                ? temposValidos.reduce((a, b) => a + b, 0) / temposValidos.length
                 : 0;
 
             document.getElementById('kpiTotalRecords').textContent = totalRecords.toLocaleString('pt-BR');
