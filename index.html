@@ -822,9 +822,9 @@
         function updateKPIs() {
             const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
 
-            const totalRecords = evolutionData.length;
+            const totalRecords = filteredData.length;
 
-            const activeRecords = evolutionData.filter(r => r.isAtivo).length;
+            const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
 
             const percentActive = totalRecords > 0
                 ? ((activeRecords / totalRecords) * 100).toFixed(1)
