@@ -1248,9 +1248,33 @@
             const ageRange = getAgeRange(row.idade);
             if (conversionByAge[row.beneficio].hasOwnProperty(ageRange)) {
                 conversionByAge[row.beneficio][ageRange].total++;
-                if (row.isAtivo) {
+                
+                const rowDate = parseDateBR(row.dataAtualizacao);
+
+                if (currentEvolutionDateFilter !== '05/05') {
+
+                    const cutoffDate = new Date(detectedYear, 4, 4);
+
+                    if (
+                    row.isAtivo &&
+                    rowDate &&
+                    rowDate <= cutoffDate
+                ) {
                     conversionByAge[row.beneficio][ageRange].active++;
                 }
+
+            } else {
+
+                const startDate = new Date(detectedYear, 4, 5);
+
+                if (
+                    row.isAtivo &&
+                    rowDate &&
+                    rowDate >= startDate
+                ) {
+                    conversionByAge[row.beneficio][ageRange].active++;
+                }
+            }
             }
         }
     });
