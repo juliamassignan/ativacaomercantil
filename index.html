@@ -1056,51 +1056,72 @@
 
         function getBenefitChartData() {
 
-            const cutoffDate = new Date(detectedYear, 4, 4); // 04/05
-            const startDate = new Date(detectedYear, 4, 5); // 05/05
+                const cutoffDate = new Date(detectedYear, 4, 4); // 04/05
+                const startDate = new Date(detectedYear, 4, 5); // 05/05
 
-            // comportamento normal
-            if (currentEvolutionDateFilter !== '05/05') {
+    // =========================================
+    // CENÁRIO NORMAL (ANTES DE 05/05)
+    // =========================================
+                if (currentEvolutionDateFilter !== '05/05') {
 
-                const conversionData = filteredData.filter(row => {
-                    const rowDate = parseDateBR(row.dataAtualizacao);
+        // gráfico de benefícios → normal
+                    const benefitByAgeData = filteredData;
 
-                    return (
-                        row.isAtivo &&
-                        rowDate &&
-                        rowDate <= cutoffDate
-                    );
-                });
+        // gráfico de conversão:
+        // TODOS entram no denominador
+        // apenas ativos entram no numerador
+                    const conversionData = filteredData.filter(row => {
+                        const rowDate = parseDateBR(row.dataAtualizacao);
+
+                        return (
+                            rowDate &&
+                            rowDate <= cutoffDate
+                        );
+                    });
+
+                    return {
+                        benefitByAgeData,
+                        conversionData,
+                        useSecondBenefit: false
+                    };
+                }
+
+    // =========================================
+    // CENÁRIO 05/05+
+    // =========================================
+
+                const benefitByAgeData = filteredData
+                    .filter(row =>
+                        row.segundoBeneficio &&
+                        row.segundoBeneficio.trim() !== ''
+                    )
+                    .map(row => ({
+                        ...row,
+                        beneficio: row.segundoBeneficio
+                    }));
+
+                const conversionData = filteredData
+                    .filter(row => {
+                        const rowDate = parseDateBR(row.dataAtualizacao);
+
+                        return (
+                            row.segundoBeneficio &&
+                            row.segundoBeneficio.trim() !== '' &&
+                            rowDate &&
+                            rowDate >= startDate
+                        );
+                    })
+                    .map(row => ({
+                        ...row,
+                        beneficio: row.segundoBeneficio
+                    }));
 
                 return {
-                    benefitByAgeData: filteredData,
-                    conversionData: conversionData
+                    benefitByAgeData,
+                    conversionData,
+                    useSecondBenefit: true
                 };
             }
-
-            // comportamento especial 05/05
-            const benefitByAgeData = filteredData.filter(row =>
-                row.segundoBeneficio &&
-                row.segundoBeneficio.trim() !== ''
-            );
-
-            const conversionData = filteredData.filter(row => {
-                const rowDate = parseDateBR(row.dataAtualizacao);
-
-                return (
-                    row.segundoBeneficio &&
-                    row.segundoBeneficio.trim() !== '' &&
-                    row.isAtivo &&
-                    rowDate &&
-                    rowDate >= startDate
-                );
-            });
-
-            return {
-                benefitByAgeData,
-                conversionData
-            };
-        }
 
         
         function updateBenefitSection() {
