@@ -1064,28 +1064,16 @@
     // =========================================
                 if (currentEvolutionDateFilter !== '05/05') {
 
-        // gráfico de benefícios → normal
-                    const benefitByAgeData = filteredData;
-
-        // gráfico de conversão:
-        // TODOS entram no denominador
-        // apenas ativos entram no numerador
-                    const conversionData = filteredData.filter(row => {
-                        const rowDate = parseDateBR(row.dataAtualizacao);
-
-                        return (
-                            rowDate &&
-                            rowDate <= cutoffDate
-                        );
-                    });
-
                     return {
-                        benefitByAgeData,
-                        conversionData,
-                        useSecondBenefit: false
+
+            // gráfico benefícios enviados
+                        benefitByAgeData: filteredData,
+
+            // gráfico taxa
+            // TODOS entram no denominador
+                        conversionData: filteredData
                     };
                 }
-
     // =========================================
     // CENÁRIO 05/05+
     // =========================================
