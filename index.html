@@ -671,6 +671,7 @@
                             faixaEtaria: toString(row['Faixa etária']),
                             uf: toString(row['UF']),
                             beneficio: toString(row['Beneficio Enviado']),
+                            segundoBeneficio: toString(row['Segundo Beneficio']),
                             statusEntrega: statusEntrega,
                             statusBloqueio: statusBloqueioDescricao,
                             statusBloqueioCode: statusBloqueioCode,
@@ -1041,14 +1042,79 @@
         // ============================================
         // SEÇÃO DE BENEFÍCIOS
         // ============================================
-        function updateBenefitSection() {
-            const benefitDataFull = filteredData;
 
-    // Gráficos → SEM filtro de data (usa tudo que já foi filtrado por UF/benefício/etc)
-        updateBenefitCards(benefitDataFull);
-        createChartBenefitByAge(benefitDataFull);     // remove filtro
-        createChartConversionByAge(benefitDataFull);  // remove filtro
-    }
+        function parseDateBR(dateStr) {
+            if (!dateStr) return null;
+
+            try {
+                const [day, month, year] = dateStr.split('/');
+                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            } catch {
+                return null;
+            }
+        }
+
+        function getBenefitChartData() {
+
+            const cutoffDate = new Date(detectedYear, 4, 4); // 04/05
+            const startDate = new Date(detectedYear, 4, 5); // 05/05
+
+            // comportamento normal
+            if (currentEvolutionDateFilter !== '05/05') {
+
+                const conversionData = filteredData.filter(row => {
+                    const rowDate = parseDateBR(row.dataAtualizacao);
+
+                    return (
+                        row.isAtivo &&
+                        rowDate &&
+                        rowDate <= cutoffDate
+                    );
+                });
+
+                return {
+                    benefitByAgeData: filteredData,
+                    conversionData: conversionData
+                };
+            }
+
+            // comportamento especial 05/05
+            const benefitByAgeData = filteredData.filter(row =>
+                row.segundoBeneficio &&
+                row.segundoBeneficio.trim() !== ''
+            );
+
+            const conversionData = filteredData.filter(row => {
+                const rowDate = parseDateBR(row.dataAtualizacao);
+
+                return (
+                    row.segundoBeneficio &&
+                    row.segundoBeneficio.trim() !== '' &&
+                    row.isAtivo &&
+                    rowDate &&
+                    rowDate >= startDate
+                );
+            });
+
+            return {
+                benefitByAgeData,
+                conversionData
+            };
+        }
+
+        
+        function updateBenefitSection() {
+            const {
+                benefitByAgeData,
+                conversionData
+            } = getBenefitChartData();
+
+            updateBenefitCards(filteredData);
+
+            createChartBenefitByAge(benefitByAgeData);
+
+            createChartConversionByAge(conversionData);
+        }
 
         function updateBenefitCards(data) {
             const benefitStats = {};
