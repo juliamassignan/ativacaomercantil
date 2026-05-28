@@ -1121,38 +1121,117 @@
         }
 
         function updateBenefitCards(data) {
+        
             const benefitStats = {};
+        
             Object.keys(benefitColors).forEach(benefit => {
-                benefitStats[benefit] = { total: 0, active: 0 };
+        
+                benefitStats[benefit] = {
+                    total: 0,
+                    active: 0
+                };
+        
             });
-
-            data.forEach(row => {
-                if (benefitStats.hasOwnProperty(row.beneficio)) {
+        
+            // =====================================
+            // ANTES DE 05/05
+            // =====================================
+        
+            if (currentEvolutionDateFilter !== '05/05') {
+        
+                const cutoffDate = new Date(detectedYear, 4, 4);
+        
+                data.forEach(row => {
+        
+                    if (!benefitStats[row.beneficio]) return;
+        
                     benefitStats[row.beneficio].total++;
-                    if (row.isAtivo) {
+        
+                    const rowDate = parseDateBR(row.dataAtualizacao);
+        
+                    if (
+                        row.isAtivo &&
+                        rowDate &&
+                        rowDate <= cutoffDate
+                    ) {
                         benefitStats[row.beneficio].active++;
                     }
-                }
-            });
-
+        
+                });
+        
+            }
+        
+            // =====================================
+            // APÓS 05/05
+            // =====================================
+        
+            else {
+        
+                data.forEach(row => {
+        
+                    if (
+                        !row.segundoBeneficio ||
+                        row.segundoBeneficio.trim() === ''
+                    ) {
+                        return;
+                    }
+        
+                    let beneficioFormatado = row.segundoBeneficio.trim();
+        
+                    if (beneficioFormatado.includes('Rappi')) {
+                        beneficioFormatado = 'Rappi';
+                    }
+                    else if (beneficioFormatado.includes('Uber')) {
+                        beneficioFormatado = 'Uber';
+                    }
+                    else if (beneficioFormatado.includes('Shopee')) {
+                        beneficioFormatado = 'Shopee';
+                    }
+                    else if (beneficioFormatado.includes('Cashback')) {
+                        beneficioFormatado = 'Cashback na Fatura';
+                    }
+        
+                    if (!benefitStats[beneficioFormatado]) return;
+        
+                    benefitStats[beneficioFormatado].total++;
+        
+                    if (row.isAtivo) {
+                        benefitStats[beneficioFormatado].active++;
+                    }
+        
+                });
+            }
+        
+            // =====================================
+            // RENDERIZAÇÃO
+            // =====================================
+        
             const container = document.getElementById('benefitCardsContainer');
+        
             container.innerHTML = '';
-
+        
             Object.entries(benefitStats).forEach(([benefit, stats]) => {
-                // base total SEM filtro de data
-                const totalFull = allData.filter(r => r.beneficio === benefit).length;
-                const percent = totalFull > 0 
-                    ? ((stats.active / totalFull) * 100).toFixed(1) 
+        
+                const percent = stats.total > 0
+                    ? ((stats.active / stats.total) * 100).toFixed(1)
                     : 0;
+        
                 const card = document.createElement('div');
+        
                 card.className = 'benefit-card';
+        
                 card.style.borderLeftColor = benefitColors[benefit];
+        
                 card.innerHTML = `
                     <div class="benefit-card-title">${benefit}</div>
                     <div class="benefit-card-stat">${stats.active}</div>
-                    <div class="benefit-card-percent">${stats.total} total • ${percent}% ativos</div>
+                    <div class="benefit-card-percent">
+                        ${stats.total} total • ${percent}% ativos
+                    </div>
                 `;
+        
                 container.appendChild(card);
+        
             });
         }
 
