@@ -1251,10 +1251,29 @@
                 conversionByAge[row.beneficio][ageRange].total++;
         
                 // ATIVO
-                if (row.isAtivo) {
-                    conversionByAge[row.beneficio][ageRange].active++;
+                const rowDate = parseDateBR(row.dataAtualizacao);
+
+                if (currentEvolutionDateFilter !== '05/05') {
+                
+                    // antes de 05/05 → só conta ativos até 04/05
+                    const cutoffDate = new Date(detectedYear, 4, 4);
+                
+                    if (
+                        row.isAtivo &&
+                        rowDate &&
+                        rowDate <= cutoffDate
+                    ) {
+                        conversionByAge[row.beneficio][ageRange].active++;
+                    }
+                
+                } else {
+
+                    // após 05/05
+                    if (row.isAtivo) {
+                        conversionByAge[row.beneficio][ageRange].active++;
+                    }
                 }
-        
+                        
             });
         
             // =====================================
@@ -1336,7 +1355,7 @@
         
                         y: {
                             beginAtZero: true,
-                            max: 100,
+                            max: 40,
         
                             title: {
                                 display: true,
