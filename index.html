@@ -1055,62 +1055,38 @@
         }
 
         function getBenefitChartData() {
-
-                const cutoffDate = new Date(detectedYear, 4, 4); // 04/05
-                const startDate = new Date(detectedYear, 4, 5); // 05/05
-
-    // =========================================
-    // CENÁRIO NORMAL (ANTES DE 05/05)
-    // =========================================
-                if (currentEvolutionDateFilter !== '05/05') {
-
-                    return {
-
-            // gráfico benefícios enviados
-                        benefitByAgeData: filteredData,
-
-            // gráfico taxa
-            // TODOS entram no denominador
-                        conversionData: filteredData
-                    };
-                }
-    // =========================================
-    // CENÁRIO 05/05+
-    // =========================================
-
-                const benefitByAgeData = filteredData
-                    .filter(row =>
-                        row.segundoBeneficio &&
-                        row.segundoBeneficio.trim() !== ''
-                    )
-                    .map(row => ({
-                        ...row,
-                        beneficio: row.segundoBeneficio
-                    }));
-
-                const conversionData = filteredData
-                    .filter(row => {
-                        const rowDate = parseDateBR(row.dataAtualizacao);
-
-                        return (
-                            row.segundoBeneficio &&
-                            row.segundoBeneficio.trim() !== '' &&
-                            rowDate &&
-                            rowDate >= startDate
-                        );
-                    })
-                    .map(row => ({
-                        ...row,
-                        beneficio: row.segundoBeneficio
-                    }));
-
+        
+            // ================================
+            // ANTES DE 05/05
+            // ================================
+            if (currentEvolutionDateFilter !== '05/05') {
+        
                 return {
-                    benefitByAgeData,
-                    conversionData,
-                    useSecondBenefit: true
+                    benefitByAgeData: filteredData,
+                    conversionData: filteredData
                 };
             }
-
+        
+            // ================================
+            // APÓS 05/05
+            // ================================
+        
+            // somente clientes com segundo benefício
+            const secondBenefitData = filteredData
+                .filter(row =>
+                    row.segundoBeneficio &&
+                    row.segundoBeneficio.trim() !== ''
+                )
+                .map(row => ({
+                    ...row,
+                    beneficio: row.segundoBeneficio
+                }));
+        
+            return {
+                benefitByAgeData: secondBenefitData,
+                conversionData: secondBenefitData
+            };
+        }
         
         function updateBenefitSection() {
             const {
@@ -1227,89 +1203,50 @@
             const conversionByAge = {};
         
             Object.keys(benefitColors).forEach(benefit => {
+        
                 conversionByAge[benefit] = {};
         
                 ageRanges.forEach(range => {
+        
                     conversionByAge[benefit][range] = {
                         active: 0,
                         total: 0
                     };
+        
                 });
             });
         
-            // =========================================
-            // TOTAL ENVIADO (DENOMINADOR)
-            // =========================================
-        
-            filteredData.forEach(row => {
-        
-                let beneficioBase = row.beneficio;
-        
-                // no cenário 05/05 usa segundo benefício
-                if (
-                    currentEvolutionDateFilter === '05/05' &&
-                    row.segundoBeneficio &&
-                    row.segundoBeneficio.trim() !== ''
-                ) {
-                    beneficioBase = row.segundoBeneficio;
-                }
-        
-                if (conversionByAge.hasOwnProperty(beneficioBase)) {
-        
-                    const ageRange = getAgeRange(row.idade);
-        
-                    conversionByAge[beneficioBase][ageRange].total++;
-                }
-            });
-        
-            // =========================================
-            // ATIVOS (NUMERADOR)
-            // =========================================
+            // =====================================
+            // BASE
+            // =====================================
         
             data.forEach(row => {
         
-                if (conversionByAge.hasOwnProperty(row.beneficio)) {
+                if (!conversionByAge[row.beneficio]) return;
         
-                    const ageRange = getAgeRange(row.idade);
+                const ageRange = getAgeRange(row.idade);
         
-                    const rowDate = parseDateBR(row.dataAtualizacao);
+                if (!conversionByAge[row.beneficio][ageRange]) return;
         
-                    if (currentEvolutionDateFilter !== '05/05') {
+                // TOTAL ENVIADO
+                conversionByAge[row.beneficio][ageRange].total++;
         
-                        const cutoffDate = new Date(detectedYear, 4, 4);
-        
-                        if (
-                            row.isAtivo &&
-                            rowDate &&
-                            rowDate <= cutoffDate
-                        ) {
-                            conversionByAge[row.beneficio][ageRange].active++;
-                        }
-        
-                    } else {
-        
-                        const startDate = new Date(detectedYear, 4, 5);
-        
-                        if (
-                            row.isAtivo &&
-                            rowDate &&
-                            rowDate >= startDate
-                        ) {
-                            conversionByAge[row.beneficio][ageRange].active++;
-                        }
-                    }
+                // ATIVO
+                if (row.isAtivo) {
+                    conversionByAge[row.beneficio][ageRange].active++;
                 }
+        
             });
         
-            // =========================================
+            // =====================================
             // DATASETS
-            // =========================================
+            // =====================================
         
             const datasets = [];
         
             Object.entries(benefitColors).forEach(([benefit, color]) => {
         
-                const dataset = {
+                datasets.push({
                     label: benefit,
         
                     data: ageRanges.map(range => {
@@ -1319,6 +1256,7 @@
                         return stats.total > 0
                             ? (stats.active / stats.total) * 100
                             : 0;
+        
                     }),
         
                     rawData: ageRanges.map(range =>
@@ -1328,9 +1266,8 @@
                     backgroundColor: color,
                     borderColor: color,
                     borderWidth: 1
-                };
+                });
         
-                datasets.push(dataset);
             });
         
             const ctx = document.getElementById('chartConversionByAge').getContext('2d');
@@ -1349,10 +1286,12 @@
                 },
         
                 options: {
+        
                     responsive: true,
                     maintainAspectRatio: false,
         
                     plugins: {
+        
                         legend: {
                             position: 'top'
                         },
@@ -1375,9 +1314,10 @@
                     },
         
                     scales: {
+        
                         y: {
                             beginAtZero: true,
-                            max: 20,
+                            max: 100,
         
                             title: {
                                 display: true,
