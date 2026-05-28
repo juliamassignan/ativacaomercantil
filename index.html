@@ -1055,38 +1055,57 @@
         }
 
         function getBenefitChartData() {
-        
-            // ================================
-            // ANTES DE 05/05
-            // ================================
-            if (currentEvolutionDateFilter.includes('05/05')) {
-        
-                return {
-                    benefitByAgeData: filteredData,
-                    conversionData: filteredData
-                };
+
+    // =====================================
+    // ANTES DE 05/05
+    // =====================================
+
+    if (currentEvolutionDateFilter !== '05/05') {
+
+        return {
+            benefitByAgeData: filteredData,
+            conversionData: filteredData
+        };
+    }
+
+    // =====================================
+    // APÓS 05/05
+    // =====================================
+
+    const secondBenefitData = filteredData
+        .filter(row =>
+            row.segundoBeneficio &&
+            row.segundoBeneficio.trim() !== ''
+        )
+        .map(row => {
+
+            let beneficioFormatado = row.segundoBeneficio.trim();
+
+            // padronização SOMENTE aqui
+            if (beneficioFormatado.includes('Rappi')) {
+                beneficioFormatado = 'Rappi';
             }
-        
-            // ================================
-            // APÓS 05/05
-            // ================================
-        
-            // somente clientes com segundo benefício
-            const secondBenefitData = filteredData
-                .filter(row =>
-                    row.segundoBeneficio &&
-                    row.segundoBeneficio.trim() !== ''
-                )
-                .map(row => ({
-                    ...row,
-                    beneficio: row.segundoBeneficio
-                }));
-        
+            else if (beneficioFormatado.includes('Uber')) {
+                beneficioFormatado = 'Uber';
+            }
+            else if (beneficioFormatado.includes('Shopee')) {
+                beneficioFormatado = 'Shopee';
+            }
+            else if (beneficioFormatado.includes('Cashback')) {
+                beneficioFormatado = 'Cashback na Fatura';
+            }
+
             return {
-                benefitByAgeData: secondBenefitData,
-                conversionData: secondBenefitData
+                ...row,
+                beneficio: beneficioFormatado
             };
-        }
+        });
+
+    return {
+        benefitByAgeData: secondBenefitData,
+        conversionData: secondBenefitData
+    };
+}
         
         function updateBenefitSection() {
             const {
