@@ -573,6 +573,22 @@
         </div>
     </div>
 
+                <!-- SEÇÃO 5: PERFORMANCE POR LOGO -->
+                <div class="section">
+                    <div class="section-title">
+                        <span class="section-icon">🏢</span>
+                        Performance por Logo
+                    </div>
+                
+                    <div class="chart-container">
+                        <canvas id="chartLogoPerformance"></canvas>
+                    </div>
+                
+                    <div class="chart-container">
+                        <canvas id="chartLogoGasto"></canvas>
+                    </div>
+                </div>
+
     <script>
         // ============================================
         // VARIÁVEIS GLOBAIS
@@ -672,12 +688,20 @@
                             uf: toString(row['UF']),
                             beneficio: toString(row['Beneficio Enviado']),
                             segundoBeneficio: toString(row['Segundo Beneficio']),
+                            logo: toString(row['Logo']),
+                            gasto: parseFloat(
+                                String(row['Gasto'] || '0')
+                                    .replace('R$', '')
+                                    .replace(/\./g, '')
+                                    .replace(',', '.')
+                            ) || 0,
                             statusEntrega: statusEntrega,
                             statusBloqueio: statusBloqueioDescricao,
                             statusBloqueioCode: statusBloqueioCode,
                             isAtivo: isAtivo,
                             dataAtualizacao: dataAtualizacao,
                             tempoAtivacao: parseFloat(row['Tempo de ativação']) || null,
+                            
                         };
                     });
 
@@ -818,6 +842,7 @@
             updateKPIs();
             updateCharts();
             updateBenefitSection();
+            createLogoPerformanceCharts();
         }
 
         function updateKPIs() {
@@ -1452,6 +1477,172 @@
             if (ageNum >= 50 && ageNum <= 59) return '50-59';
             if (ageNum >= 60) return '>=60';
             return '>=60'; // Padrão para idades fora do intervalo
+        }
+
+        function createLogoPerformanceCharts() {
+
+            const logoStats = {};
+        
+            filteredData.forEach(row => {
+        
+                if (!row.logo) return;
+        
+                if (!logoStats[row.logo]) {
+        
+                    logoStats[row.logo] = {
+                        enviados: 0,
+                        ativos: 0,
+                        gastoTotal: 0,
+                        clientesComGasto: 0
+                    };
+                }
+        
+                logoStats[row.logo].enviados++;
+        
+                if (row.isAtivo) {
+                    logoStats[row.logo].ativos++;
+                }
+        
+                if (row.gasto > 100) {
+        
+                    logoStats[row.logo].gastoTotal += row.gasto;
+                    logoStats[row.logo].clientesComGasto++;
+        
+                }
+        
+            });
+        
+            const logos = Object.keys(logoStats);
+        
+            const enviados = logos.map(
+                l => logoStats[l].enviados
+            );
+        
+            const ativos = logos.map(
+                l => logoStats[l].ativos
+            );
+        
+            const gastoMedio = logos.map(l => {
+        
+                const item = logoStats[l];
+        
+                return item.clientesComGasto > 0
+                    ? item.gastoTotal / item.clientesComGasto
+                    : 0;
+        
+            });
+        
+            // ==========================
+            // GRÁFICO 1
+            // ==========================
+        
+            if (charts['logoPerformance']) {
+                charts['logoPerformance'].destroy();
+            }
+        
+            const ctx1 = document
+                .getElementById('chartLogoPerformance')
+                .getContext('2d');
+        
+            charts['logoPerformance'] = new Chart(ctx1, {
+        
+                type: 'bar',
+        
+                data: {
+        
+                    labels: logos,
+        
+                    datasets: [
+                        {
+                            label: 'Enviados',
+                            data: enviados,
+                            backgroundColor: '#4D61FF'
+                        },
+                        {
+                            label: 'Ativos',
+                            data: ativos,
+                            backgroundColor: '#10B981'
+                        }
+                    ]
+                },
+        
+                options: {
+        
+                    responsive: true,
+        
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        
+            // ==========================
+            // GRÁFICO 2
+            // ==========================
+        
+            if (charts['logoGasto']) {
+                charts['logoGasto'].destroy();
+            }
+        
+            const ctx2 = document
+                .getElementById('chartLogoGasto')
+                .getContext('2d');
+        
+            charts['logoGasto'] = new Chart(ctx2, {
+        
+                type: 'bar',
+        
+                data: {
+        
+                    labels: logos,
+        
+                    datasets: [
+                        {
+                            label: 'Gasto Médio (> R$100)',
+                            data: gastoMedio,
+                            backgroundColor: '#F59E0B'
+                        }
+                    ]
+                },
+        
+                options: {
+        
+                    responsive: true,
+        
+                    plugins: {
+        
+                        tooltip: {
+        
+                            callbacks: {
+        
+                                label: function(context) {
+        
+                                    return 'R$ ' +
+                                        context.parsed.y.toFixed(2);
+        
+                                }
+                            }
+                        }
+                    },
+        
+                    scales: {
+        
+                        y: {
+        
+                            beginAtZero: true,
+        
+                            ticks: {
+        
+                                callback: function(value) {
+                                    return 'R$ ' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // ============================================
