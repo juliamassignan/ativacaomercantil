@@ -569,9 +569,8 @@
 
 
                 </div>
-            </div>
-        </div>
-        <!-- SEÇÃO 5: PERFORMANCE POR LOGO -->
+
+                <!-- SEÇÃO 5: PERFORMANCE POR LOGO -->
                 <div class="section">
                     <div class="section-title">
                         <span class="section-icon">🏢</span>
@@ -582,10 +581,14 @@
                         <canvas id="chartLogoPerformance"></canvas>
                     </div>
                 
-                    <div class="chart-container">
-                        <canvas id="chartLogoGasto"></canvas>
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E6E6E6;">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px;">Gasto Médio por Logo (clientes com gasto > R$100)</h3>
+                        <div class="chart-container">
+                            <canvas id="chartLogoGasto"></canvas>
+                        </div>
                     </div>
                 </div>
+            </div>
     </div>
 
                 
@@ -1619,10 +1622,10 @@
                             callbacks: {
         
                                 label: function(context) {
-        
-                                    return 'R$ ' +
-                                        context.parsed.y.toFixed(2);
-        
+                                    const logo = logos[context.dataIndex];
+                                    const stats = logoStats[logo];
+                                    const n = stats.clientesComGasto;
+                                    return `Gasto Médio: R$ ${context.parsed.y.toFixed(2)} (${n} cliente${n !== 1 ? 's' : ''})`;
                                 }
                             }
                         }
