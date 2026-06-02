@@ -576,12 +576,12 @@
                         <span class="section-icon">🏢</span>
                         Performance por Logo
                     </div>
-                
-                    <div class="chart-container">
-                        <canvas id="chartLogoPerformance"></canvas>
-                    </div>
-                
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E6E6E6;">
+
+                    <!-- Cards de Logo -->
+                    <div id="logoCardsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;"></div>
+
+                    <!-- Gráfico Gasto Médio -->
+                    <div style="padding-top: 20px; border-top: 1px solid #E6E6E6;">
                         <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px;">Gasto Médio por Logo (clientes com gasto > R$100)</h3>
                         <div class="chart-container">
                             <canvas id="chartLogoGasto"></canvas>
@@ -693,12 +693,22 @@
                             beneficio: toString(row['Beneficio Enviado']),
                             segundoBeneficio: toString(row['Segundo Beneficio']),
                             logo: toString(row['Logo']),
-                            gasto: parseFloat(
-                                String(row['Gasto'] || '0')
-                                    .replace('R$', '')
-                                    .replace(/\./g, '')
-                                    .replace(',', '.')
-                            ) || 0,
+                            gasto: (() => {
+                                const raw = row['Gasto'];
+                                // Se já é número (Excel leu direto), usa direto
+                                if (typeof raw === 'number') return raw;
+                                const s = String(raw || '0').replace('R$', '').replace(/\s/g, '');
+                                // Formato BR com milhar: 1.234,56 → tem ponto E vírgula
+                                if (s.includes(',') && s.includes('.')) {
+                                    return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+                                }
+                                // Só vírgula: 236,34 → formato BR sem milhar
+                                if (s.includes(',')) {
+                                    return parseFloat(s.replace(',', '.')) || 0;
+                                }
+                                // Só ponto ou número limpo: 236.34 ou 236 → já é formato válido
+                                return parseFloat(s) || 0;
+                            })(),
                             statusEntrega: statusEntrega,
                             statusBloqueio: statusBloqueioDescricao,
                             statusBloqueioCode: statusBloqueioCode,
@@ -1486,161 +1496,107 @@
         function createLogoPerformanceCharts() {
 
             const logoStats = {};
-        
+
             filteredData.forEach(row => {
-        
                 if (!row.logo) return;
-        
                 if (!logoStats[row.logo]) {
-        
-                    logoStats[row.logo] = {
-                        enviados: 0,
-                        ativos: 0,
-                        gastoTotal: 0,
-                        clientesComGasto: 0
-                    };
+                    logoStats[row.logo] = { enviados: 0, ativos: 0, gastoTotal: 0, clientesComGasto: 0 };
                 }
-        
                 logoStats[row.logo].enviados++;
-        
-                if (row.isAtivo) {
-                    logoStats[row.logo].ativos++;
-                }
-        
+                if (row.isAtivo) logoStats[row.logo].ativos++;
                 if (row.gasto > 100) {
-        
                     logoStats[row.logo].gastoTotal += row.gasto;
                     logoStats[row.logo].clientesComGasto++;
-        
                 }
-        
             });
-        
-            const logos = Object.keys(logoStats);
-        
-            const enviados = logos.map(
-                l => logoStats[l].enviados
-            );
-        
-            const ativos = logos.map(
-                l => logoStats[l].ativos
-            );
-        
+
+            const logos = Object.keys(logoStats).sort();
+
+            // ==========================
+            // CARDS POR LOGO
+            // ==========================
+            const container = document.getElementById('logoCardsContainer');
+            container.innerHTML = '';
+
+            logos.forEach(logo => {
+                const s = logoStats[logo];
+                const pct = s.enviados > 0 ? ((s.ativos / s.enviados) * 100).toFixed(1) : '0.0';
+                const pctNum = parseFloat(pct);
+                const convColor = pctNum >= 15 ? '#10B981' : pctNum >= 8 ? '#F59E0B' : '#EF4444';
+                const barWidth = Math.min(pctNum * 3.5, 100);
+
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: #fff;
+                    border-radius: 10px;
+                    padding: 18px 20px;
+                    border-top: 4px solid #4D61FF;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+                `;
+                card.innerHTML = `
+                    <div style="font-size: 13px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">Logo ${logo}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #888;">Enviados</span>
+                        <span style="font-size: 15px; font-weight: 700; color: #4D61FF;">${s.enviados.toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <span style="font-size: 12px; color: #888;">Ativos</span>
+                        <span style="font-size: 15px; font-weight: 700; color: #10B981;">${s.ativos.toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div style="background: #f0f0f0; border-radius: 99px; height: 6px; margin-bottom: 6px; overflow: hidden;">
+                        <div style="width: ${barWidth}%; height: 100%; background: ${convColor}; border-radius: 99px; transition: width 0.4s;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 11px; color: #aaa;">Conversão</span>
+                        <span style="font-size: 17px; font-weight: 800; color: ${convColor};">${pct}%</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // ==========================
+            // GRÁFICO GASTO MÉDIO
+            // ==========================
             const gastoMedio = logos.map(l => {
-        
                 const item = logoStats[l];
-        
-                return item.clientesComGasto > 0
-                    ? item.gastoTotal / item.clientesComGasto
-                    : 0;
-        
+                return item.clientesComGasto > 0 ? item.gastoTotal / item.clientesComGasto : 0;
             });
-        
-            // ==========================
-            // GRÁFICO 1
-            // ==========================
-        
-            if (charts['logoPerformance']) {
-                charts['logoPerformance'].destroy();
-            }
-        
-            const ctx1 = document
-                .getElementById('chartLogoPerformance')
-                .getContext('2d');
-        
-            charts['logoPerformance'] = new Chart(ctx1, {
-        
-                type: 'bar',
-        
-                data: {
-        
-                    labels: logos,
-        
-                    datasets: [
-                        {
-                            label: 'Enviados',
-                            data: enviados,
-                            backgroundColor: '#4D61FF'
-                        },
-                        {
-                            label: 'Ativos',
-                            data: ativos,
-                            backgroundColor: '#10B981'
-                        }
-                    ]
-                },
-        
-                options: {
-        
-                    responsive: true,
-        
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    }
-                }
-            });
-        
-            // ==========================
-            // GRÁFICO 2
-            // ==========================
-        
-            if (charts['logoGasto']) {
-                charts['logoGasto'].destroy();
-            }
-        
-            const ctx2 = document
-                .getElementById('chartLogoGasto')
-                .getContext('2d');
-        
+
+            if (charts['logoGasto']) charts['logoGasto'].destroy();
+
+            const ctx2 = document.getElementById('chartLogoGasto').getContext('2d');
+
             charts['logoGasto'] = new Chart(ctx2, {
-        
                 type: 'bar',
-        
                 data: {
-        
                     labels: logos,
-        
-                    datasets: [
-                        {
-                            label: 'Gasto Médio (> R$100)',
-                            data: gastoMedio,
-                            backgroundColor: '#F59E0B'
-                        }
-                    ]
+                    datasets: [{
+                        label: 'Gasto Médio (> R$100)',
+                        data: gastoMedio,
+                        backgroundColor: '#F59E0B'
+                    }]
                 },
-        
                 options: {
-        
                     responsive: true,
-        
+                    maintainAspectRatio: false,
                     plugins: {
-        
                         tooltip: {
-        
                             callbacks: {
-        
                                 label: function(context) {
                                     const logo = logos[context.dataIndex];
                                     const stats = logoStats[logo];
                                     const n = stats.clientesComGasto;
-                                    return `Gasto Médio: R$ ${context.parsed.y.toFixed(2)} (${n} cliente${n !== 1 ? 's' : ''})`;
+                                    return `Gasto Médio: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} (${n} cliente${n !== 1 ? 's' : ''})`;
                                 }
                             }
                         }
                     },
-        
                     scales: {
-        
                         y: {
-        
                             beginAtZero: true,
-        
                             ticks: {
-        
                                 callback: function(value) {
-                                    return 'R$ ' + value;
+                                    return 'R$ ' + value.toLocaleString('pt-BR');
                                 }
                             }
                         }
