@@ -494,8 +494,8 @@
                 <!-- SEÇÃO 2: STATUS DE ENTREGA -->
                 <div class="section">
                     <div class="section-title">
-                        <span class="section-icon">📬</span>
-                        Status de Entrega
+                        <span class="section-icon">🚚</span>
+                        Status de Entrega (SMS)
                     </div>
                     <div class="chart-container small">
                         <canvas id="chartDeliveryStatus"></canvas>
@@ -546,8 +546,6 @@
                         Distribuição por Benefício Enviado
                     </div>
 
-
-
                     <!-- Subseção: Cards de Benefícios -->
                     <div class="benefit-cards" id="benefitCardsContainer"></div>
 
@@ -566,8 +564,6 @@
                             <canvas id="chartConversionByAge"></canvas>
                         </div>
                     </div>
-
-
                 </div>
 
                 <!-- SEÇÃO 5: PERFORMANCE POR LOGO -->
@@ -589,9 +585,8 @@
                     </div>
                 </div>
             </div>
+        </div>
     </div>
-
-                
 
     <script>
         // ============================================
@@ -700,9 +695,7 @@
                         // Processar data: converter para DD/MM/YYYY se necessário
                         let dataAtualizacao = row['Data Última Atualização'] || '';
                         if (typeof dataAtualizacao === 'number') {
-                            // Converter serial do Excel para data (sem ajuste de fuso horário)
                             const excelDate = new Date((dataAtualizacao - 25569) * 86400 * 1000);
-                            // Corrigir subtraçao de um dia: adicionar 1 dia
                             excelDate.setDate(excelDate.getDate() + 1);
                             dataAtualizacao = excelDate.toLocaleDateString('pt-BR');
                         } else {
@@ -721,11 +714,28 @@
                             detectedYear = parseInt(yearMatch[1]);
                         }
 
-                        // Processar Status de Entrega com fallback para múltiplas variações de nome
+                        // Processar Status de Entrega
                         let statusEntrega = toString(row['Status de Entrega']) || toString(row['Status Entrega']) || toString(row['Status de entrega']) || '';
                         if (statusEntrega.toLowerCase() === 'n/a') {
                             statusEntrega = 'Número Inválido';
                         }
+                        
+                        // Processar Gasto (Tratamento de strings e formatos)
+                        const rawGasto = row['Gasto'];
+                        let gastoValue = 0;
+                        if (typeof rawGasto === 'number') {
+                            gastoValue = rawGasto;
+                        } else if (rawGasto) {
+                            let s = String(rawGasto).replace('R$', '').replace(/\s/g, '');
+                            if (s.includes(',') && s.includes('.')) {
+                                gastoValue = parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+                            } else if (s.includes(',')) {
+                                gastoValue = parseFloat(s.replace(',', '.')) || 0;
+                            } else {
+                                gastoValue = parseFloat(s) || 0;
+                            }
+                        }
+
                         return {
                             nome: toString(row['Nome']),
                             telefone: toString(row['Telefone']),
@@ -735,44 +745,25 @@
                             beneficio: toString(row['Beneficio Enviado']),
                             segundoBeneficio: toString(row['Segundo Beneficio']),
                             logo: toString(row['Logo']),
-                            gasto: (() => {
-                                const raw = row['Gasto'];
-                                // Se já é número (Excel leu direto), usa direto
-                                if (typeof raw === 'number') return raw;
-                                const s = String(raw || '0').replace('R$', '').replace(/\s/g, '');
-                                // Formato BR com milhar: 1.234,56 → tem ponto E vírgula
-                                if (s.includes(',') && s.includes('.')) {
-                                    return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
-                                }
-                                // Só vírgula: 236,34 → formato BR sem milhar
-                                if (s.includes(',')) {
-                                    return parseFloat(s.replace(',', '.')) || 0;
-                                }
-                                // Só ponto ou número limpo: 236.34 ou 236 → já é formato válido
-                                return parseFloat(s) || 0;
-                            })(),
+                            gasto: gastoValue,
                             statusEntrega: statusEntrega,
                             statusBloqueio: statusBloqueioDescricao,
                             statusBloqueioCode: statusBloqueioCode,
                             isAtivo: isAtivo,
                             dataAtualizacao: dataAtualizacao,
                             tempoAtivacao: parseFloat(row['Tempo de ativação']) || null,
-                            
                         };
                     });
 
                     lastImportDate = new Date();
                     filteredData = [...allData];
 
-                    // Mostrar preview
                     showPreview(jsonData);
                     populateFilters();
 
-                    // Mostrar dashboard
                     document.getElementById('uploadSection').classList.add('hidden');
                     document.getElementById('dashboardContent').classList.remove('hidden');
 
-                    // Atualizar dashboard
                     updateDashboard();
 
                 } catch (error) {
@@ -813,6 +804,7 @@
         function populateFilters() {
             const ufs = [...new Set(allData.map(r => r.uf).filter(u => u))].sort();
             const ufSelect = document.getElementById('filterUF');
+            ufSelect.innerHTML = '<option value="">Todos</option>';
             ufs.forEach(uf => {
                 const option = document.createElement('option');
                 option.value = uf;
@@ -822,6 +814,7 @@
 
             const benefits = [...new Set(allData.map(r => r.beneficio).filter(b => b))].sort();
             const benefitSelect = document.getElementById('filterBenefit');
+            benefitSelect.innerHTML = '<option value="">Todos</option>';
             benefits.forEach(benefit => {
                 const option = document.createElement('option');
                 option.value = benefit;
@@ -831,6 +824,7 @@
 
             const blockStatuses = [...new Set(allData.map(r => r.statusBloqueio).filter(s => s))].sort();
             const blockSelect = document.getElementById('filterBlockStatus');
+            blockSelect.innerHTML = '<option value="">Todos</option>';
             blockStatuses.forEach(status => {
                 const option = document.createElement('option');
                 option.value = status;
@@ -839,9 +833,6 @@
             });
         }
 
-        // ============================================
-        // FILTROS E ANÁLISE DE DADOS
-        // ============================================
         function applyFilters() {
             const ufFilter = document.getElementById('filterUF').value;
             const benefitFilter = document.getElementById('filterBenefit').value;
@@ -859,22 +850,18 @@
 
         function setEvolutionDateFilter(dateStr) {
             currentEvolutionDateFilter = dateStr;
-            document.querySelectorAll('#evolutionDateFilter .date-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            updateDashboard();
-        }
-
-        function setBenefitDateFilter(dateStr) {
-            currentBenefitDateFilter = dateStr;
-            document.querySelectorAll('#benefitDateFilter .date-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('#evolutionDateFilter .date-btn').forEach(btn => {
+                if (btn.getAttribute('onclick').includes(`'${dateStr}'`)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
             updateDashboard();
         }
 
         function getFilteredDataByDate(dateFilter) {
-            if (dateFilter === 'all') {
-                return filteredData;
-            }
+            if (dateFilter === 'all') return filteredData;
 
             const [filterDay, filterMonth] = dateFilter.split('/');
             const filterDate = new Date(detectedYear, parseInt(filterMonth) - 1, parseInt(filterDay));
@@ -891,9 +878,6 @@
             });
         }
 
-        // ============================================
-        // ATUALIZAR DASHBOARD
-        // ============================================
         function updateDashboard() {
             updateKPIs();
             updateCharts();
@@ -903,33 +887,21 @@
 
         function updateKPIs() {
             const evolutionData = getFilteredDataByDate(currentEvolutionDateFilter);
-
             const totalRecords = filteredData.length;
-
             const activeRecords = evolutionData.filter(r => r.isAtivo).length;
-
-            const percentActive = totalRecords > 0
-                ? ((activeRecords / totalRecords) * 100).toFixed(1)
-                : 0;
+            const percentActive = totalRecords > 0 ? ((activeRecords / totalRecords) * 100).toFixed(1) : 0;
 
             const temposValidos = evolutionData
-                .filter(r =>
-                r.isAtivo &&
-                r.tempoAtivacao !== null &&
-                !isNaN(r.tempoAtivacao)
-                )
+                .filter(r => r.isAtivo && r.tempoAtivacao !== null && !isNaN(r.tempoAtivacao))
                 .map(r => Number(r.tempoAtivacao));
 
-            const mediaTempo = temposValidos.length > 0
-                ? temposValidos.reduce((a, b) => a + b, 0) / temposValidos.length
-                : 0;
+            const mediaTempo = temposValidos.length > 0 ? temposValidos.reduce((a, b) => a + b, 0) / temposValidos.length : 0;
 
             document.getElementById('kpiTotalRecords').textContent = totalRecords.toLocaleString('pt-BR');
             document.getElementById('kpiTotalActive').textContent = activeRecords.toLocaleString('pt-BR');
             document.getElementById('kpiPercentActive').textContent = percentActive + '%';
             document.getElementById('kpiTempoAtivacao').textContent = mediaTempo.toFixed(1) + ' dias';
 
-            // Status de Entrega
             const deliveryStats = {
                 'Entregue Operadora': 0,
                 'Entregue Celular': 0,
@@ -944,14 +916,13 @@
             });
 
             const total = Object.values(deliveryStats).reduce((a, b) => a + b, 0);
-            document.getElementById('deliveryOperadora').textContent = deliveryStats['Entregue Operadora'];
-            document.getElementById('deliveryOperadoraPercent').textContent = total > 0 ? ((deliveryStats['Entregue Operadora'] / total) * 100).toFixed(1) + '%' : '0%';
-            document.getElementById('deliveryPhone').textContent = deliveryStats['Entregue Celular'];
-            document.getElementById('deliveryPhonePercent').textContent = total > 0 ? ((deliveryStats['Entregue Celular'] / total) * 100).toFixed(1) + '%' : '0%';
-            document.getElementById('deliveryNotDelivered').textContent = deliveryStats['Não Entregue'];
-            document.getElementById('deliveryNotDeliveredPercent').textContent = total > 0 ? ((deliveryStats['Não Entregue'] / total) * 100).toFixed(1) + '%' : '0%';
-            document.getElementById('deliveryInvalid').textContent = deliveryStats['Número Inválido'];
-            document.getElementById('deliveryInvalidPercent').textContent = total > 0 ? ((deliveryStats['Número Inválido'] / total) * 100).toFixed(1) + '%' : '0%';
+            ['Entregue Operadora', 'Entregue Celular', 'Não Entregue', 'Número Inválido'].forEach(status => {
+                const id = status === 'Entregue Operadora' ? 'deliveryOperadora' : 
+                           status === 'Entregue Celular' ? 'deliveryPhone' : 
+                           status === 'Não Entregue' ? 'deliveryNotDelivered' : 'deliveryInvalid';
+                document.getElementById(id).textContent = deliveryStats[status];
+                document.getElementById(id + 'Percent').textContent = total > 0 ? ((deliveryStats[status] / total) * 100).toFixed(1) + '%' : '0%';
+            });
         }
 
         function updateCharts() {
@@ -968,9 +939,6 @@
             charts = {};
         }
 
-        // ============================================
-        // GRÁFICOS
-        // ============================================
         function createChartActiveEvolution() {
             const dataToProcess = getFilteredDataByDate(currentEvolutionDateFilter);
             const dataByDate = {};
@@ -982,9 +950,7 @@
                         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                         const dateStr = date.toLocaleDateString('pt-BR');
                         dataByDate[dateStr] = (dataByDate[dateStr] || 0) + 1;
-                    } catch (e) {
-                        // Ignorar datas inválidas
-                    }
+                    } catch (e) {}
                 }
             });
 
@@ -996,17 +962,14 @@
                 return dateA - dateB;
             });
 
-            const labels = sortedDates;
-            const data = sortedDates.map(label => dataByDate[label]);
-
             const ctx = document.getElementById('chartActiveEvolution').getContext('2d');
             charts['activeEvolution'] = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: sortedDates,
                     datasets: [{
                         label: 'Ativos por Data',
-                        data: data,
+                        data: sortedDates.map(label => dataByDate[label]),
                         borderColor: '#4D61FF',
                         backgroundColor: 'rgba(77, 97, 255, 0.1)',
                         borderWidth: 2,
@@ -1021,20 +984,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
                 }
             });
         }
@@ -1044,8 +994,7 @@
                 'Entregue Operadora': 0,
                 'Entregue Celular': 0,
                 'Não Entregue': 0,
-                'Número Inválido': 0,
-                'N/a': 0
+                'Número Inválido': 0
             };
 
             filteredData.forEach(row => {
@@ -1061,7 +1010,7 @@
                     labels: Object.keys(deliveryStats),
                     datasets: [{
                         data: Object.values(deliveryStats),
-                        backgroundColor: ['#10B981', '#4D61FF', '#F59E0B', '#EF4444', '#8B5CF6'],
+                        backgroundColor: ['#10B981', '#4D61FF', '#F59E0B', '#EF4444'],
                         borderColor: '#fff',
                         borderWidth: 2
                     }]
@@ -1069,11 +1018,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
+                    plugins: { legend: { position: 'bottom' } }
                 }
             });
         }
@@ -1086,9 +1031,6 @@
             });
 
             const labels = Object.keys(blockStats);
-            const data = Object.values(blockStats);
-            const colors = ['#10B981', '#4D61FF', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-
             const ctx = document.getElementById('chartBlockStatus').getContext('2d');
             charts['blockStatus'] = new Chart(ctx, {
                 type: 'bar',
@@ -1096,8 +1038,8 @@
                     labels: labels,
                     datasets: [{
                         label: 'Quantidade',
-                        data: data,
-                        backgroundColor: colors.slice(0, labels.length),
+                        data: Object.values(blockStats),
+                        backgroundColor: ['#10B981', '#4D61FF', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'].slice(0, labels.length),
                         borderColor: '#fff',
                         borderWidth: 1
                     }]
@@ -1106,442 +1048,123 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true
-                        }
-                    }
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true } }
                 }
             });
         }
 
-        // ============================================
-        // SEÇÃO DE BENEFÍCIOS
-        // ============================================
-
-        function parseDateBR(dateStr) {
-            if (!dateStr) return null;
-
-            try {
-                const [day, month, year] = dateStr.split('/');
-                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            } catch {
-                return null;
-            }
-        }
-
-        function getBenefitChartData() {
-
-    // =====================================
-    // ANTES DE 05/05
-    // =====================================
-
-    if (currentEvolutionDateFilter !== '05/05') {
-
-        return {
-            benefitByAgeData: filteredData,
-            conversionData: filteredData
-        };
-    }
-
-    // =====================================
-    // APÓS 05/05
-    // =====================================
-
-    const secondBenefitData = filteredData
-        .filter(row =>
-            row.segundoBeneficio &&
-            row.segundoBeneficio.trim() !== ''
-        )
-        .map(row => {
-
-            let beneficioFormatado = row.segundoBeneficio.trim();
-
-            // padronização SOMENTE aqui
-            if (beneficioFormatado.includes('Rappi')) {
-                beneficioFormatado = 'Rappi';
-            }
-            else if (beneficioFormatado.includes('Uber')) {
-                beneficioFormatado = 'Uber';
-            }
-            else if (beneficioFormatado.includes('Shopee')) {
-                beneficioFormatado = 'Shopee';
-            }
-            else if (beneficioFormatado.includes('Cashback')) {
-                beneficioFormatado = 'Cashback na Fatura';
-            }
-
-            return {
-                ...row,
-                beneficio: beneficioFormatado
-            };
-        });
-
-    return {
-        benefitByAgeData: secondBenefitData,
-        conversionData: secondBenefitData
-    };
-}
-        
         function updateBenefitSection() {
-            const {
-                benefitByAgeData,
-                conversionData
-            } = getBenefitChartData();
+            const data = filteredData;
+            const stats = {};
+            Object.keys(benefitColors).forEach(b => stats[b] = { total: 0, ativos: 0 });
 
-            updateBenefitCards(filteredData);
-
-            createChartBenefitByAge(benefitByAgeData);
-
-            createChartConversionByAge(conversionData);
-        }
-
-        function updateBenefitCards(data) {
-        
-            const benefitStats = {};
-        
-            Object.keys(benefitColors).forEach(benefit => {
-        
-                benefitStats[benefit] = {
-                    total: 0,
-                    active: 0
-                };
-        
+            data.forEach(row => {
+                if (stats[row.beneficio]) {
+                    stats[row.beneficio].total++;
+                    if (row.isAtivo) stats[row.beneficio].ativos++;
+                }
             });
-        
-            // =====================================
-            // ANTES DE 05/05
-            // =====================================
-        
-            if (currentEvolutionDateFilter !== '05/05') {
-        
-                const cutoffDate = new Date(detectedYear, 4, 4);
-        
-                data.forEach(row => {
-        
-                    if (!benefitStats[row.beneficio]) return;
-        
-                    benefitStats[row.beneficio].total++;
-        
-                    const rowDate = parseDateBR(row.dataAtualizacao);
-        
-                    if (
-                        row.isAtivo &&
-                        rowDate &&
-                        rowDate <= cutoffDate
-                    ) {
-                        benefitStats[row.beneficio].active++;
-                    }
-        
-                });
-        
-            }
-        
-            // =====================================
-            // APÓS 05/05
-            // =====================================
-        
-            else {
-        
-                data.forEach(row => {
-        
-                    if (
-                        !row.segundoBeneficio ||
-                        row.segundoBeneficio.trim() === ''
-                    ) {
-                        return;
-                    }
-        
-                    let beneficioFormatado = row.segundoBeneficio.trim();
-        
-                    if (beneficioFormatado.includes('Rappi')) {
-                        beneficioFormatado = 'Rappi';
-                    }
-                    else if (beneficioFormatado.includes('Uber')) {
-                        beneficioFormatado = 'Uber';
-                    }
-                    else if (beneficioFormatado.includes('Shopee')) {
-                        beneficioFormatado = 'Shopee';
-                    }
-                    else if (beneficioFormatado.includes('Cashback')) {
-                        beneficioFormatado = 'Cashback na Fatura';
-                    }
-        
-                    if (!benefitStats[beneficioFormatado]) return;
-        
-                    benefitStats[beneficioFormatado].total++;
-        
-                    if (row.isAtivo) {
-                        benefitStats[beneficioFormatado].active++;
-                    }
-        
-                });
-            }
-        
-            // =====================================
-            // RENDERIZAÇÃO
-            // =====================================
-        
+
             const container = document.getElementById('benefitCardsContainer');
-        
             container.innerHTML = '';
-        
-            Object.entries(benefitStats).forEach(([benefit, stats]) => {
-        
-                const percent = stats.total > 0
-                    ? ((stats.active / stats.total) * 100).toFixed(1)
-                    : 0;
-        
+            Object.entries(stats).forEach(([benefit, s]) => {
+                const pct = s.total > 0 ? ((s.ativos / s.total) * 100).toFixed(1) : '0.0';
                 const card = document.createElement('div');
-        
                 card.className = 'benefit-card';
-        
                 card.style.borderLeftColor = benefitColors[benefit];
-        
                 card.innerHTML = `
                     <div class="benefit-card-title">${benefit}</div>
-                    <div class="benefit-card-stat">${stats.active}</div>
-                    <div class="benefit-card-percent">
-                        ${stats.total} total • ${percent}% ativos
-                    </div>
+                    <div class="benefit-card-stat">${s.ativos.toLocaleString('pt-BR')}</div>
+                    <div class="benefit-card-percent">${pct}% de ativos (${s.total.toLocaleString('pt-BR')} total)</div>
                 `;
-        
                 container.appendChild(card);
-        
             });
+
+            createChartBenefitByAge();
+            createChartConversionByAge();
         }
 
-        function createChartBenefitByAge(data) {
-            const benefitByAge = {};
-            Object.keys(benefitColors).forEach(benefit => {
-                benefitByAge[benefit] = {};
-                ageRanges.forEach(range => {
-                    benefitByAge[benefit][range] = 0;
-                });
+        function createChartBenefitByAge() {
+            const data = filteredData;
+            const counts = {};
+            Object.keys(benefitColors).forEach(b => {
+                counts[b] = {};
+                ageRanges.forEach(r => counts[b][r] = 0);
             });
 
             data.forEach(row => {
-                if (benefitByAge.hasOwnProperty(row.beneficio)) {
-                    const ageRange = getAgeRange(row.idade);
-                    if (benefitByAge[row.beneficio].hasOwnProperty(ageRange)) {
-                        benefitByAge[row.beneficio][ageRange]++;
-                    }
+                const range = getAgeRange(row.idade);
+                if (counts[row.beneficio] && counts[row.beneficio][range] !== undefined) {
+                    counts[row.beneficio][range]++;
                 }
             });
 
-            const datasets = [];
-            Object.entries(benefitColors).forEach(([benefit, color]) => {
-                const dataset = {
-                    label: benefit,
-                    data: ageRanges.map(range => benefitByAge[benefit][range]),
-                    backgroundColor: color,
-                    borderColor: color,
-                    borderWidth: 1
-                };
-                datasets.push(dataset);
-            });
+            const datasets = Object.entries(benefitColors).map(([benefit, color]) => ({
+                label: benefit,
+                data: ageRanges.map(r => counts[benefit][r]),
+                backgroundColor: color
+            }));
 
             const ctx = document.getElementById('chartBenefitByAge').getContext('2d');
             if (charts['benefitByAge']) charts['benefitByAge'].destroy();
             charts['benefitByAge'] = new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: ageRanges,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: false
-                        },
-                        y: {
-                            stacked: false,
-                            beginAtZero: true
-                        }
-                    }
-                }
+                data: { labels: ageRanges, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-
-
-        function createChartConversionByAge(data) {
-        
-            const conversionByAge = {};
-        
-            Object.keys(benefitColors).forEach(benefit => {
-        
-                conversionByAge[benefit] = {};
-        
-                ageRanges.forEach(range => {
-        
-                    conversionByAge[benefit][range] = {
-                        active: 0,
-                        total: 0
-                    };
-        
-                });
+        function createChartConversionByAge() {
+            const data = filteredData;
+            const conv = {};
+            Object.keys(benefitColors).forEach(b => {
+                conv[b] = {};
+                ageRanges.forEach(r => conv[b][r] = { total: 0, active: 0 });
             });
-        
-            // =====================================
-            // BASE
-            // =====================================
-        
+
             data.forEach(row => {
-        
-                if (!conversionByAge[row.beneficio]) return;
-        
-                const ageRange = getAgeRange(row.idade);
-        
-                if (!conversionByAge[row.beneficio][ageRange]) return;
-        
-                // TOTAL ENVIADO
-                conversionByAge[row.beneficio][ageRange].total++;
-        
-                // ATIVO
-                const rowDate = parseDateBR(row.dataAtualizacao);
-
-                if (currentEvolutionDateFilter !== '05/05') {
-                
-                    // antes de 05/05 → só conta ativos até 04/05
-                    const cutoffDate = new Date(detectedYear, 4, 4);
-                
-                    if (
-                        row.isAtivo &&
-                        rowDate &&
-                        rowDate <= cutoffDate
-                    ) {
-                        conversionByAge[row.beneficio][ageRange].active++;
-                    }
-                
-                } else {
-
-                    // após 05/05
-                    if (row.isAtivo) {
-                        conversionByAge[row.beneficio][ageRange].active++;
-                    }
+                const range = getAgeRange(row.idade);
+                if (conv[row.beneficio] && conv[row.beneficio][range]) {
+                    conv[row.beneficio][range].total++;
+                    if (row.isAtivo) conv[row.beneficio][range].active++;
                 }
-                        
             });
-        
-            // =====================================
-            // DATASETS
-            // =====================================
-        
-            const datasets = [];
-        
-            Object.entries(benefitColors).forEach(([benefit, color]) => {
-        
-                datasets.push({
-                    label: benefit,
-        
-                    data: ageRanges.map(range => {
-        
-                        const stats = conversionByAge[benefit][range];
-        
-                        return stats.total > 0
-                            ? (stats.active / stats.total) * 100
-                            : 0;
-        
-                    }),
-        
-                    rawData: ageRanges.map(range =>
-                        conversionByAge[benefit][range]
-                    ),
-        
-                    backgroundColor: color,
-                    borderColor: color,
-                    borderWidth: 1
-                });
-        
-            });
-        
+
+            const datasets = Object.entries(benefitColors).map(([benefit, color]) => ({
+                label: benefit,
+                data: ageRanges.map(r => {
+                    const s = conv[benefit][r];
+                    return s.total > 0 ? (s.active / s.total) * 100 : 0;
+                }),
+                backgroundColor: color
+            }));
+
             const ctx = document.getElementById('chartConversionByAge').getContext('2d');
-        
-            if (charts['conversionByAge']) {
-                charts['conversionByAge'].destroy();
-            }
-        
+            if (charts['conversionByAge']) charts['conversionByAge'].destroy();
             charts['conversionByAge'] = new Chart(ctx, {
-        
                 type: 'bar',
-        
-                data: {
-                    labels: ageRanges,
-                    datasets: datasets
-                },
-        
-                options: {
-        
-                    responsive: true,
+                data: { labels: ageRanges, datasets: datasets },
+                options: { 
+                    responsive: true, 
                     maintainAspectRatio: false,
-        
-                    plugins: {
-        
-                        legend: {
-                            position: 'top'
-                        },
-        
-                        tooltip: {
-                            callbacks: {
-        
-                                label: function(context) {
-        
-                                    const dataset = context.dataset;
-                                    const index = context.dataIndex;
-                                    const stats = dataset.rawData[index];
-        
-                                    const percent = context.parsed.y.toFixed(1);
-        
-                                    return `${dataset.label}: ${percent}% (${stats.active}/${stats.total})`;
-                                }
-                            }
-                        }
-                    },
-        
-                    scales: {
-        
-                        y: {
-                            beginAtZero: true,
-                            max: 30,
-        
-                            title: {
-                                display: true,
-                                text: 'Taxa de Ativação (%)'
-                            }
-                        }
-                    }
+                    scales: { y: { beginAtZero: true, max: 30, title: { display: true, text: 'Taxa (%)' } } }
                 }
             });
         }
+
         function getAgeRange(age) {
-            const ageNum = Number(age);
-            if (!age || isNaN(ageNum)) return '>=60';
-            if (ageNum >= 20 && ageNum <= 49) return '20-49';
-            if (ageNum >= 50 && ageNum <= 59) return '50-59';
-            if (ageNum >= 60) return '>=60';
-            return '>=60'; // Padrão para idades fora do intervalo
+            const n = Number(age);
+            if (n >= 20 && n <= 49) return '20-49';
+            if (n >= 50 && n <= 59) return '50-59';
+            return '>=60';
         }
 
         function getNomeLogo(codigo) {
             return logoMap[String(codigo)] || codigo;
         }
-        
 
         function createLogoPerformanceCharts() {
-
             const logoStats = {};
 
             filteredData.forEach(row => {
@@ -1551,6 +1174,7 @@
                 }
                 logoStats[row.logo].enviados++;
                 if (row.isAtivo) logoStats[row.logo].ativos++;
+                // Bug fix: garantir que o gasto é considerado se > 100
                 if (row.gasto > 100) {
                     logoStats[row.logo].gastoTotal += row.gasto;
                     logoStats[row.logo].clientesComGasto++;
@@ -1558,72 +1182,51 @@
             });
 
             const logos = Object.keys(logoStats).sort();
-
-            // ==========================
-            // CARDS POR LOGO
-            // ==========================
             const container = document.getElementById('logoCardsContainer');
             container.innerHTML = '';
 
             logos.forEach(logo => {
                 const s = logoStats[logo];
                 const pct = s.enviados > 0 ? ((s.ativos / s.enviados) * 100).toFixed(1) : '0.0';
-                const pctNum = parseFloat(pct);
-                const convColor = pctNum >= 15 ? '#10B981' : pctNum >= 8 ? '#F59E0B' : '#EF4444';
-                const barWidth = Math.min(pctNum * 3.5, 100);
-
+                const convColor = parseFloat(pct) >= 15 ? '#10B981' : parseFloat(pct) >= 8 ? '#F59E0B' : '#EF4444';
+                
                 const card = document.createElement('div');
-                card.style.cssText = `
-                    background: #fff;
-                    border-radius: 10px;
-                    padding: 18px 20px;
-                    border-top: 4px solid #4D61FF;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-                `;
+                card.style.cssText = 'background:#fff; border-radius:10px; padding:18px 20px; border-top:4px solid #4D61FF; box-shadow:0 2px 8px rgba(0,0,0,0.07);';
                 card.innerHTML = `
-                    <div style="font-size: 13px; font-weight: 700; color: #444; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">
+                    <div style="font-size:13px; font-weight:700; color:#444; margin-bottom:14px; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">
                         ${logo} - ${getNomeLogo(logo)}
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 12px; color: #888;">Enviados</span>
-                        <span style="font-size: 15px; font-weight: 700; color: #4D61FF;">${s.enviados.toLocaleString('pt-BR')}</span>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <span style="font-size:12px; color:#888;">Enviados</span>
+                        <span style="font-size:15px; font-weight:700; color:#4D61FF;">${s.enviados.toLocaleString('pt-BR')}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                        <span style="font-size: 12px; color: #888;">Ativos</span>
-                        <span style="font-size: 15px; font-weight: 700; color: #10B981;">${s.ativos.toLocaleString('pt-BR')}</span>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:14px;">
+                        <span style="font-size:12px; color:#888;">Ativos</span>
+                        <span style="font-size:15px; font-weight:700; color:#10B981;">${s.ativos.toLocaleString('pt-BR')}</span>
                     </div>
-                    <div style="background: #f0f0f0; border-radius: 99px; height: 6px; margin-bottom: 6px; overflow: hidden;">
-                        <div style="width: ${barWidth}%; height: 100%; background: ${convColor}; border-radius: 99px; transition: width 0.4s;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 11px; color: #aaa;">Conversão</span>
-                        <span style="font-size: 17px; font-weight: 800; color: ${convColor};">${pct}%</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:11px; color:#aaa;">Conversão</span>
+                        <span style="font-size:17px; font-weight:800; color:${convColor};">${pct}%</span>
                     </div>
                 `;
                 container.appendChild(card);
             });
-            
-            console.log(logoStats);
-            console.log(gastoMedio);
-            // ==========================
-            // GRÁFICO GASTO MÉDIO
-            // ==========================
-            const gastoMedio = logos.map(l => {
+
+            // Gerar dados do gráfico de gasto médio
+            const gastoMedioData = logos.map(l => {
                 const item = logoStats[l];
                 return item.clientesComGasto > 0 ? item.gastoTotal / item.clientesComGasto : 0;
             });
 
-            if (charts['logoGasto']) charts['logoGasto'].destroy();
-
             const ctx2 = document.getElementById('chartLogoGasto').getContext('2d');
-
+            if (charts['logoGasto']) charts['logoGasto'].destroy();
             charts['logoGasto'] = new Chart(ctx2, {
                 type: 'bar',
                 data: {
-                    labels: logos,
+                    labels: logos.map(l => `${l} (${getNomeLogo(l)})`),
                     datasets: [{
                         label: 'Gasto Médio (> R$100)',
-                        data: gastoMedio,
+                        data: gastoMedioData,
                         backgroundColor: '#F59E0B'
                     }]
                 },
@@ -1636,32 +1239,18 @@
                                 label: function(context) {
                                     const logo = logos[context.dataIndex];
                                     const stats = logoStats[logo];
-                                    const n = stats.clientesComGasto;
-                                    return `Gasto Médio: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} (${n} cliente${n !== 1 ? 's' : ''})`;
+                                    return `Gasto Médio: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits:2})} (${stats.clientesComGasto} clientes)`;
                                 }
                             }
                         }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return 'R$ ' + value.toLocaleString('pt-BR');
-                                }
-                            }
-                        }
-                    }
+                    scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } } }
                 }
             });
         }
 
-        // ============================================
-        // INICIALIZAÇÃO
-        // ============================================
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('uploadSection').classList.remove('hidden');
-            document.getElementById('dashboardContent').classList.add('hidden');
         });
     </script>
 </body>
