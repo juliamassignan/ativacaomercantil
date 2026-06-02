@@ -632,6 +632,48 @@
             'Q': 'Danificado'
         };
 
+        const logoMap = {
+            '304': 'ELO MAIS',
+            '306': 'ELO BASICO INTERNACIONAL',
+            '309': 'ELO PLENO',
+            '391': 'MB ELO CONSIGNADO CORRESPONDEN',
+            '392': 'MB ELO CONSIGNADO REDE',
+            '1': 'MB VISA WORLD MULTIPLO',
+            '2': 'MB VISA WORLD CREDITO',
+            '4': 'MB VISA GOLD MULTIPLO',
+            '5': 'MB VISA GOLD CREDITO',
+            '6': 'MB VISA CREDIT MULTIPLO',
+            '7': 'MB VISA CREDIT CREDITO',
+            '8': 'MB VISA CARD MULTIPLO',
+            '9': 'CARTAO MULTIPLO MB PLENO',
+            '10': 'CARTAO CREDITO MB PLENO',
+            '11': 'MB VISA PLATINUM MULTIPLO',
+            '13': 'CARTAO MULTIPLO VISA INFINITE',
+            '14': 'CARTAO CREDITO VISA INFINITE',
+            '15': 'VISA INFINITE BEYOND',
+            '21': 'MB VISA PLATINUM CREDITO',
+            '22': 'INSS - VALE MAIS',
+            '50': 'BUSINESS MB - CLIENTES',
+            '51': 'BUSINESS MB - BMB',
+            '83': 'CONSIG PUBLICO CORRESPOND',
+            '84': 'CONSIG PUBLICO REDE',
+            '87': 'CONSIG MAIS PUBLICO CORRESP',
+            '88': 'CONSIG MAIS PUBLICO REDE',
+            '91': 'CARTAO CREDITO CERTO CONSIGNADO - Correspondente',
+            '92': 'CARTAO CREDITO CERTO CONSIGNADO - CTA.CORR. E CTA.50 Rede',
+            '93': 'MB VISA CARD CREDITO MB TURBO',
+            '96': 'CARTAO CRED.CERTO - NAO CSG - CTA.CORR. E CTA.50',
+            '97': 'INSS CONSIGNADO - CORRESP',
+            '98': 'INSS CONSIGNADO - REDE',
+            '99': 'MB VISA CARD CREDITO',
+            '100': 'CONSIG. PUBLICO INFINITE',
+            '101': 'CONSIG. INSS PLATINUM',
+            '102': 'CONSIG. PUBLICO PLATINUM',
+            '103': 'CONSIG. INSS DIAMANTE',
+            '111': 'MB VISA GOLD MULTIPLO CHIP PILOTO',
+            '112': 'MB VISA GOLD CREDITO CHIP PILOTO'
+        };
+
         // ============================================
         // UPLOAD E PROCESSAMENTO DE DADOS
         // ============================================
@@ -692,7 +734,9 @@
                             uf: toString(row['UF']),
                             beneficio: toString(row['Beneficio Enviado']),
                             segundoBeneficio: toString(row['Segundo Beneficio']),
-                            logo: toString(row['Logo']),
+                            logo: logoMap[toString(row['Logo'])]
+                                ? `${toString(row['Logo'])} - ${logoMap[toString(row['Logo'])]}`
+                                : toString(row['Logo']),
                             gasto: (() => {
                                 const raw = row['Gasto'];
                                 // Se já é número (Excel leu direto), usa direto
