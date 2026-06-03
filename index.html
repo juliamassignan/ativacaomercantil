@@ -1219,7 +1219,8 @@
             });
 
             const ctx2 = document.getElementById('chartLogoGasto').getContext('2d');
-            if (charts['logoGasto']) charts['logoGasto'].destroy();
+            const existing = Chart.getChart('chartLogoGasto');
+            if (existing) existing.destroy();
             charts['logoGasto'] = new Chart(ctx2, {
                 type: 'bar',
                 data: {
