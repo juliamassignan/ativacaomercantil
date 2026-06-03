@@ -1552,7 +1552,9 @@
                 }
             });
 
-            const logos = Object.keys(logoStats).sort((a, b) => logoStats[b].ativos - logoStats[a].ativos);
+            const logos = Object.keys(logoStats)
+                .filter(l => logoStats[l].clientesComGasto > 0)
+                .sort((a, b) => logoStats[b].ativos - logoStats[a].ativos);
 
             // ==========================
             // CARDS POR LOGO
