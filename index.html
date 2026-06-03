@@ -1552,7 +1552,7 @@
                 }
             });
 
-            const logos = Object.keys(logoStats).sort();
+            const logos = Object.keys(logoStats).sort((a, b) => logoStats[b].ativos - logoStats[a].ativos);
 
             // ==========================
             // CARDS POR LOGO
@@ -1562,10 +1562,6 @@
 
             logos.forEach(logo => {
                 const s = logoStats[logo];
-                const pct = s.enviados > 0 ? ((s.ativos / s.enviados) * 100).toFixed(1) : '0.0';
-                const pctNum = parseFloat(pct);
-                const convColor = pctNum >= 15 ? '#10B981' : pctNum >= 8 ? '#F59E0B' : '#EF4444';
-                const barWidth = Math.min(pctNum * 3.5, 100);
 
                 const card = document.createElement('div');
                 card.style.cssText = `
@@ -1585,13 +1581,7 @@
                         <span style="font-size: 12px; color: #888;">Ativos</span>
                         <span style="font-size: 15px; font-weight: 700; color: #10B981;">${s.ativos.toLocaleString('pt-BR')}</span>
                     </div>
-                    <div style="background: #f0f0f0; border-radius: 99px; height: 6px; margin-bottom: 6px; overflow: hidden;">
-                        <div style="width: ${barWidth}%; height: 100%; background: ${convColor}; border-radius: 99px; transition: width 0.4s;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 11px; color: #aaa;">Conversão</span>
-                        <span style="font-size: 17px; font-weight: 800; color: ${convColor};">${pct}%</span>
-                    </div>
+                    
                 `;
                 container.appendChild(card);
             });
